@@ -14,18 +14,18 @@ import numpy as np
 
 class hallParams:
     motorgains = []
-    throttle = []
     duration = []
-    delta = []
-    intervals = []
     vel = []
-    def __init__(self, motorgains, throttle, duration, delta, intervals, vel):
+    turn_rate = []
+    telemetry = []
+    repeat = []
+    def __init__(self, motorgains, throttle, duration, vel, telemetry, repeat):
         self.motorgains = motorgains
-        self.throttle = throttle
         self.duration = duration
-        self.delta = delta
-        self.intervals = intervals
         self.vel = vel
+        self.turn_rate = turn_rate
+        self.telemetry = telemetry
+        self.repeat = repeat
 
 
 def xb_safe_exit():
@@ -40,9 +40,6 @@ def xb_send(status, type, data):
     payload = chr(status) + chr(type) + ''.join(data)
     shared.xb.tx(dest_addr = shared.DEST_ADDR, data = payload)
 
-def resetRobot():
-    xb_send(0, command.SOFTWARE_RESET, pack('h',0))
-
 #send user selected command
 def rawCommand():
     xb_send(0,0xff, pack('h',0))
@@ -54,6 +51,60 @@ def menu():
     print "w:left+    |s:left-    |x:left off   |b: bogus command"
     print "e:right+   |d:right-   |c:right off  |<sp>: all off"
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
+
+def settingsMenu(params):
+    print "t:duration   |m:telemetry   |p = motion profile"
+    print "Proceed: Space Bar"
+    while True:
+        print '>',
+        keypress = msvcrt.getch()
+        if keypress == ' ':
+            break
+        elif keypress == 't':
+            print 'current duration',params.duration,' new value:',
+            params.duration = int(raw_input())
+        elif keypress == 'm':
+            params.telemetry = not(params.telemetry)
+            print 'Telemetry recording', params.telemetry
+        elif keypress == 'p':
+            print 'Desired Velocity, Turn Rate: ',
+            x = raw_input()
+            if len(x):
+                temp = map(float,x.split(','))
+            params.vel = temp[0]
+            params.turn_rate = temp[1]
+            setVelProfile(params.vel, params.turn_rate)
+
+def repeatMenu(params):
+    print "SPACE: Repeat with same settings  |q:quit"
+    print "s: Settings                       |z:zero motors"
+    while True:
+        print '>',
+        keypress = msvcrt.getch()
+        if keypress == ' ':
+            params.repeat = True
+            break
+        elif keypress == 's':
+            params.repeat = False
+            break
+        elif keypress == 'z':
+             xb_send(0, command.ZERO_POS,  "Zero motor")
+        elif (keypress == 'q') 
+            print "Exit."
+            xb.halt()
+            ser.close()
+            sys.exit(0)
+
+def setVelProfile(vel, turn_rate):
+    print "Sending velocity profile, V, w", vel, turn_rate
+    rVel = 1043*vel + 80*turn_rate
+    lVel = 1043*vel - 80*turn_rate
+    lVelAr = [int(lVel),int(lVel),int(lVel),int(lVel)]
+    rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
+    temp = lVelAr + rVelAr
+    print temp
+    xb_send(0,command.SET_VEL_PROFILE, pack('8h',*temp))
+
     
 #get velocity profile
 def getVelProfile(params):
@@ -96,25 +147,14 @@ def getVelProfile(params):
     #params.intervals = intervals
     #params.vel = vel
         
-
-#set velocity profile
-def setVelProfile(params):
-    print "Sending velocity profile"
-    print "set points [encoder values]", params.delta
-    print "intervals (ms)",params.intervals
-    print "velocities (<<8)",params.vel
-    temp = 2*(params.intervals + params.delta + params.vel)
-    xb_send(0, command.SET_VEL_PROFILE, pack('24h',*temp))
-    time.sleep(0.3)
     
-
 # set robot control gains
-def setHallGains(motorgains):
+def setMotorGains(motorgains):
     count = 0
     while not(shared.motor_gains_set):
         print "Setting motor gains. Packet:",count
         count = count + 1
-        xb_send(0, command.SET_HALL_GAINS, pack('10h',*motorgains))
+        xb_send(0, command.SET_PID_GAINS, pack('10h',*motorgains))
         time.sleep(0.3)
         if count > 8:
             xb_safe_exit()
@@ -187,3 +227,90 @@ def getDstAddrString():
     
 def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
+
+def flashReadback(numSamples, params):
+    delay = 0.025
+    raw_input("Press any key to start readback of %d packets ..." % numSamples)
+    print "started readback"
+    shared.imudata = []  # reset imudata structure
+    shared.pkts = 0  # reset packet count???
+    xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
+    # While waiting, write parameters to start of file
+    writeFileHeader(shared.dataFileName, params)     
+    time.sleep(delay*numSamples + 3)
+    while shared.pkts != numSamples:
+        print "Retry"
+        shared.imudata = []
+        shared.pkts = 0
+        xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
+        time.sleep(delay*numSamples + 3)
+        if shared.pkts > numSamples:
+            print "too many packets"
+            break
+    print "readback done"
+    fileout = open(shared.dataFileName, 'a')
+    np.savetxt(fileout , np.array(shared.imudata), '%d', delimiter = ',')
+    fileout.close()
+    print "data saved to ",shared.dataFileName
+        
+def writeFileHeader(dataFileName):
+    global cycle
+    fileout = open(dataFileName,'w')
+    #write out parameters in format which can be imported to Excel
+    today = time.localtime()
+    date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
+    date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
+    fileout.write('"Data file recorded ' + date + '"\n')
+    fileout.write('"%  Frequency(Hz)         = ' +repr(1000/cycle) + '"\n')
+    fileout.write('"%  keyboard_telem with hall effect "\n')
+    fileout.write('"%  motorgains    = ' + repr(params.motorgains) + '\n')
+    fileout.write('"% Columns: "\n')
+    # order for wiring on RF Turner
+    fileout.write('"% time | Rlegs | Llegs | DCR | DCL | GyroX | GryoY | GryoZ | GryoZAvg | AX | AY | AZ | RBEMF | LBEMF "\n')
+ #   fileout.write('"% time | Rlegs | Llegs | DCL | DCR | GyroX | GryoY | GryoZ | GryoZAvg | AX | AY | AZ | LBEMF | RBEMF | SteerOut"\n')
+  #  fileout.write('time, Rlegs, Llegs, DCL, DCR, GyroX, GryoY, GryoZ, GryoZAvg, AX, AY, AZ, LBEMF, RBEMF, SteerOut\n')
+    fileout.close()
+
+def eraseFlashMem():
+    xb_send(0, command.ERASE_SECTORS, pack('h',0))
+        print "started erase, 3 second dwell"
+        time.sleep(3)
+
+def startTelemetrySave(numSamples):
+    start = 0   # two byte start time to record
+    skip = 0    # store every other sample if = 1
+    temp=[numSamples,start,skip]
+    print 'temp =',temp,'\n'
+    xb_send(0, command.START_TELEM, pack('3h',*temp))
+
+def query_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is one of "yes" or "no".
+    """
+    valid = {"yes":True,   "y":True,  "ye":True,
+             "no":False,     "n":False}
+    if default == None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = raw_input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "\
+                             "(or 'y' or 'n').\n")

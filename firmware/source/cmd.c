@@ -46,6 +46,11 @@ static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, 
 static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 
+//Experiment/Flash Commands
+static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 /*-----------------------------------------------------------------------------
  *          Public functions
 -----------------------------------------------------------------------------*/
@@ -59,14 +64,18 @@ void cmdSetup(void) {
     }
     cmd_func[CMD_TEST_RADIO] = &test_radio;
     cmd_func[CMD_TEST_MPU] = &test_mpu;
-    cmd_func[CMD_SET_THRUST_OPENLOOP] = &cmdSetThrustOpenLoop;
-    cmd_func[CMD_SET_PID_GAINS] = &cmdSetPIDGains;
+    cmd_func[CMD_SET_THRUST_OPEN_LOOP] = &cmdSetThrustOpenLoop;
     cmd_func[CMD_PID_START_MOTORS] = &cmdPIDStartMotors;
-    cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
+    cmd_func[CMD_SET_PID_GAINS] = &cmdSetPIDGains;
+    cmd_func[CMD_GET_AMS_POS] = &cmdGetAMSPos;
+    cmd_func[CMD_SPECIAL_TELEMETRY] = &cmdSpecialTelemetry;
+    cmd_func[CMD_ERASE_SECTORS] = &cmdEraseSectors;
+    cmd_func[CMD_FLASH_READBACK] = &cmdFlashReadback;
     cmd_func[CMD_SET_VEL_PROFILE] = &cmdSetVelProfile;
     cmd_func[CMD_WHO_AM_I] = &cmdWhoAmI;
-    cmd_func[CMD_GET_AMS_POS] = &cmdGetAMSPos;
-    cmd_func[CMD_ZERO_POS] = &cmdZeroPos;
+    cmd_func[CMD_ZERO_POS] = &cmdZeroPos;   
+    cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
+    cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
 
 }
 
@@ -91,7 +100,7 @@ void cmdPushFunc(MacPacket rx_packet) {
 unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
     unsigned char i, string_length; unsigned char *version_string;
     // maximum string length to avoid packet size limit
-    version_string = (unsigned char *)"DHALDANE_VRoACH;PID-HARD;STEER-HARD: Tue Feb 12 14:04:47 2013";
+    version_string = versionGetString();
     i = 0;
     while((i < 127) && version_string[i] != '\0') {
         i++;
@@ -115,9 +124,24 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
             sizeof(motor_count), (unsigned char *)motor_count, 0);
     return 1;
 }
+// ==== Flash/Experiment Commands ==============================================================================
+// =============================================================================================================
 
-// ==== Motor PID Commands ======================================================================================
-// ================================================================================================================ 
+unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    return 1;
+}
+unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    return 1;
+}
+unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    return 1;
+}
+unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    return 1;
+}
+
+// ==== Motor PID Commands =====================================================================================
+// =============================================================================================================
 
 unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
     int thrust1 = frame[0] + (frame[1] << 8);
@@ -190,7 +214,7 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
 			delta[i] = 0x4000;
 			interval[i] = delta[i]/vel[i];
 		} else {
-			delta[i] = 0;
+            delta[i] = 0;
 			interval[i] = 100;	//Fudge factor
 		}
 		
