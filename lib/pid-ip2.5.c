@@ -144,27 +144,6 @@ void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff)
 	pid->i_error = 0;
 }
 
-// called from steeringSetup()
-void initPIDObj(pidT *pid, int Kp, int Ki, int Kd, int Kaw, int ff)
-{
-    pid->input = 0;
-    pid->dState = 0;
-    pid->iState = 0;
-    pid->output = 0;
-    pid->y_old = 0;
-    pid->p = 0;
-    pid->i = 0;
-    pid->d = 0;
-    //This is just a guess for the derivative filter time constant
-    pid->N = 5;
-    pid->Kp = Kp;
-    pid->Ki= Ki;
-    pid->Kd = Kd;
-    pid->Kaw = Kaw; 
-	pid->feedforward = 0;
-    pid->onoff = 0;
-    pid->error = 0;
-}
 
 
 // called from set thrust closed loop, etc. Thrust 

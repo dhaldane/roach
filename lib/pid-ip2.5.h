@@ -28,20 +28,6 @@
 #endif
 
 //Structures and enums
-//pid type for turning (steering)
-typedef struct
-{
-	int input;
-    long dState, iState, preSat, p, i, d;
-    int Kp, Ki, Kd, Kaw, y_old, output;
-    unsigned char N;
-	char onoff; //boolean
-	long error;
-	unsigned long run_time;
-	unsigned long start_time;
-	int inputOffset;
-	int feedforward;
-} pidT;
 
 // pid type for leg control
 typedef struct
@@ -108,7 +94,6 @@ void UpdatePID(pidPos *pid);
 void pidSetup();
 void initPIDVelProfile();
 void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel);
-void initPIDObj(pidT *pid, int Kp, int Ki, int Kd, int Kaw, int ff);
 void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff);
 //void SetupTimer1(void);
 void pidSetInput(int pid_num, int input_val);
