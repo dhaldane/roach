@@ -57,6 +57,8 @@ int main() {
     sclockSetup();
 
     LED_1 = 1;
+    LED_2 = 1;
+    LED_3 = 1;
 
     // Message Passing
     fun_queue = carrayCreate(FUN_Q_LEN);

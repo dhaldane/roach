@@ -22,6 +22,7 @@
 #include "mpu6000.h"
 #include "uart_driver.h"
 #include "ppool.h"
+#include "dfmem.h"
 
 #include <stdlib.h> // for malloc
 #include "init.h"  // for Timer1

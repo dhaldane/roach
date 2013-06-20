@@ -12,7 +12,7 @@ import time
 
 from serial import Serial, SerialException
 #from PIL import Image
-import numpy as np
+# import numpy as np
 
 from xbee import XBee
 from struct import *

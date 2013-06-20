@@ -44,7 +44,7 @@ import test_suite
 
 #RADIO_DEV_NAME  = '/dev/tty.usbserial-*' or 'COMx'
 #RADIO_DEV_NAME = 'COM1'
-RADIO_DEV_NAME = 'COM9'
+RADIO_DEV_NAME = 'COM3'
 BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
