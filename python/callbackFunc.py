@@ -84,13 +84,6 @@ def xbee_received(packet):
             gains = unpack(pattern, data)
             print gains
             shared.steering_gains_set = True
-        # SET_CTRLD_TURN_RATE
-        elif type == command.SET_CTRLD_TURN_RATE:
-            print "Set turning rate"
-            rate = unpack(pattern, data)[0]
-            print "degrees: ",shared.count2deg * rate
-            print "counts: ", rate
-            shared.steering_rate_set = True
         # GET_IMU_LOOP_ZGYRO
         elif type == command.GET_IMU_LOOP_ZGYRO:
             pp = 2;
@@ -122,12 +115,6 @@ def xbee_received(packet):
             print "Sleep reply: ",datum[0]
             if datum[0] == 0:
                 shared.awake = True;
-        # SET_HALL_GAINS
-        elif type == command.SET_HALL_GAINS:
-            print "Set Hall Effect PID gains"
-            gains = unpack(pattern, data)
-            print gains
-            shared.motor_gains_set = True 
         # ZERO_POS
         elif type == command.ZERO_POS:
             print 'Hall zeros established; Previous motor positions:',

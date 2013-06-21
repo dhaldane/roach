@@ -188,6 +188,7 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     ff = frame[idx] + (frame[idx+1] << 8); idx+=2;
     pidSetGains(1,Kp,Ki,Kd,Kaw, ff);
 
+    radioSendData(RADIO_DEST_ADDR, status, CMD_SET_PID_GAINS, 20, frame, 0);
     //Send confirmation packet
     // WARNING: Will fail at high data throughput
     //radioConfirmationPacket(RADIO_DEST_ADDR, CMD_SET_PID_GAINS, status, 20, frame);

@@ -25,6 +25,7 @@ def main():
     telemetry = True
     repeat = False
 
+    print turn_rate
     params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
     setMotorGains(motorgains)
 

@@ -1,6 +1,6 @@
 import glob
 import time
-import sys
+import msvcrt, sys
 from lib import command
 from callbackFunc import xbee_received
 import datetime
@@ -19,7 +19,7 @@ class hallParams:
     turn_rate = []
     telemetry = []
     repeat = []
-    def __init__(self, motorgains, throttle, duration, vel, telemetry, repeat):
+    def __init__(self, motorgains, duration, vel, turn_rate, telemetry, repeat):
         self.motorgains = motorgains
         self.duration = duration
         self.vel = vel
