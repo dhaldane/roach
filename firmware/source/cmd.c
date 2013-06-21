@@ -155,7 +155,7 @@ unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigne
 // =============================================================================================================
 
 unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    int thrust1 = frame[1] + (frame[0] << 8);
+    int thrust1 = frame[0] + (frame[1] << 8);
     int thrust2 = frame[2] + (frame[3] << 8);
     unsigned int run_time_ms = frame[4] + (frame[5] << 8);
 

@@ -7,7 +7,7 @@
 #ifndef __CMD_CONST_H
 #define __CMD_CONST_H
 //  since C arrays defined 0... n-1, better define 1 larger than max CMD
-#define MAX_CMD_FUNC           0x90 // 0x00 - 0x3F
+#define MAX_CMD_FUNC           0xF0 // 0x00 - 0x3F
 
 // CMD values of 0x00(0) - 0x3F(127) are defined here
 
