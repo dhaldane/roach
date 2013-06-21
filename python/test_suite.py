@@ -33,13 +33,13 @@ kTestMotorCmd   = 128
 kTestSMACmd     = 5
 kTestMPUCmd     = 6
 
-SetVelProfile   =   0x8C
 PIDStartMotors  =   0x81
-PIDStopMotors   =   0x8E
 SetPIDGains     =   0x82
 GetAMSPos       =   0x84
-WhoAmI          =   0x8D                    
-zeroPos         =   0x8F                    
+SetVelProfile   =   0x8D
+WhoAmI          =   0x8E                    
+zeroPos         =   0x90                    
+PIDStopMotors   =   0x92
 
 #kImWidth = 160
 #kImHeight = 100

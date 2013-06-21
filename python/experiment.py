@@ -57,10 +57,10 @@ def main():
         #Start robot
         xb_send(0, command.START_TIMED_RUN, pack('h',0))
 
-        time.sleep(params.duration) / 1000.0)
+        time.sleep(params.duration / 1000.0)
         
 
-        if params.telemetry and query_yes_no('Save Data?')
+        if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params)
 
         repeatMenu(params)

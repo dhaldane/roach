@@ -51,7 +51,7 @@ BASE_ECHO = 0x3f
 
 # CMD values of 0x80(128) - 0xEF(239) are available for user applications.
 SET_THRUST_OPEN_LOOP    =   0x80
-SET_PID_START_MOTORS	=   0x81
+PID_START_MOTORS	    =   0x81
 SET_PID_GAINS           =   0x82
 GET_PID_TELEMETRY       =   0x83
 GET_AMS_POS		        =   0x84

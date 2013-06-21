@@ -89,7 +89,7 @@ def repeatMenu(params):
             break
         elif keypress == 'z':
              xb_send(0, command.ZERO_POS,  "Zero motor")
-        elif (keypress == 'q') 
+        elif keypress == 'q': 
             print "Exit."
             xb.halt()
             ser.close()
@@ -273,8 +273,8 @@ def writeFileHeader(dataFileName):
 
 def eraseFlashMem():
     xb_send(0, command.ERASE_SECTORS, pack('h',0))
-        print "started erase, 3 second dwell"
-        time.sleep(3)
+    print "started erase, 3 second dwell"
+    time.sleep(3)
 
 def startTelemetrySave(numSamples):
     start = 0   # two byte start time to record

@@ -10,10 +10,10 @@ pktFormat = { \
     command.GET_IMU_DATA:           'l6h', \
     command.TX_SAVED_STATE_DATA:    'l3f', \
     command.SET_THRUST_OPEN_LOOP:   '', \
-    command.SET_THRUST_CLOSED_LOOP: '', \
+    command.PID_START_MOTORS:       '', \
     command.SET_PID_GAINS:          '10h', \
     command.GET_PID_TELEMETRY:      '', \
-    command.SET_CTRLD_TURN_RATE:    '=h', \
+    command.GET_AMS_POS:            '=2l', \
     command.GET_IMU_LOOP_ZGYRO:     '='+2*'Lhhh', \
     command.SET_MOVE_QUEUE:         '', \
     command.SET_STEERING_GAINS:     '6h', \
@@ -26,7 +26,6 @@ pktFormat = { \
     command.SET_VEL_PROFILE:        '24h' ,\
     command.WHO_AM_I:               '', \
     command.ZERO_POS:               '=2l', \
-    command.SET_HALL_GAINS:         '10h' \
     }
                
 #XBee callback function, called every time a packet is recieved
@@ -39,7 +38,7 @@ def xbee_received(packet):
    
     status = ord(rf_data[0])
     type = ord(rf_data[1])
-	print 'Received %d' % type
+    print 'Received %d' % type
     data = rf_data[2:]
     
     
