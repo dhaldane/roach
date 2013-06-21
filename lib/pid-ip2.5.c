@@ -178,7 +178,13 @@ unsigned long temp;
 }
 
 void pidStartTimedTrial(unsigned int run_time){
-    
+    unsigned long temp;
+
+    temp = t1_ticks;  // need atomic read due to interrupt  
+    pidObjs[0].run_time = run_time;
+    pidObjs[1].run_time = run_time;
+    if ((temp + (unsigned long) run_time) > lastMoveTime)
+    { lastMoveTime = temp + (unsigned long) run_time; }  // set run time to max requested time
 }
 
 // from cmd.c  PID set gains
@@ -338,7 +344,17 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
         for (j = 0; j< NUM_PIDS; j++) {
         // only update tracking setpoint if time has not yet expired
             if (pidObjs[j].onoff) {
-                pidGetSetpoint(j);
+                if (pidObjs[j].timeFlag){
+                    if (pidObjs[j].start_time + pidObjs[j].run_time >= t1_ticks){
+                        pidGetSetpoint(j);
+                    } else if(t1_ticks > lastMoveTime){ // turn off if done running all legs
+                        pidObjs[0].onoff = 0;
+                        pidObjs[1].onoff = 0;
+                    } 
+                } 
+                else {                 
+                    pidGetSetpoint(j);
+                }
             }
         }
         pidSetControl();
@@ -354,7 +370,6 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
             //     paySetStatus(uart_tx_packet->payload, 0);
             //     paySetData(uart_tx_packet->payload, sizeof(telemStruct_t), (unsigned char *) &telemPIDdata);
             //     uart_tx_flag = 1;
-            }
         }
     }
     LED_3 = 0;

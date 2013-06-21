@@ -128,9 +128,17 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 // =============================================================================================================
 
 unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    int run_time = frame[0] + (frame[1] << 8);
+
     pidObjs[0].timeFlag = 1;
     pidObjs[1].timeFlag = 1;
-    
+    pidStartTimedTrial(run_time);
+
+    pidSetInput(0, 0);
+    pidOn(0);
+    pidSetInput(1, 0);
+    pidOn(1); 
+
     return 1;
 }
 unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
@@ -147,7 +155,7 @@ unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigne
 // =============================================================================================================
 
 unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    int thrust1 = frame[0] + (frame[1] << 8);
+    int thrust1 = frame[1] + (frame[0] << 8);
     int thrust2 = frame[2] + (frame[3] << 8);
     unsigned int run_time_ms = frame[4] + (frame[5] << 8);
 
@@ -232,6 +240,8 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
 }
 
 unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+    pidObjs[0].timeFlag = 0;
+    pidObjs[1].timeFlag = 0;
     pidSetInput(0, 0);
     pidOn(0);
     pidSetInput(1, 0);
