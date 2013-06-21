@@ -25,7 +25,6 @@ def main():
     telemetry = True
     repeat = False
 
-    print turn_rate
     params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
     setMotorGains(motorgains)
 
@@ -56,7 +55,7 @@ def main():
         if params.telemetry:
             startTelemetrySave(numSamples)
         #Start robot
-        xb_send(0, command.START_TIMED_RUN, pack('h',0))
+        xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
 
         time.sleep(params.duration / 1000.0)
         
