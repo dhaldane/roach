@@ -47,7 +47,7 @@ typedef struct
 	unsigned long start_time;
 	int inputOffset;  // BEMF setpoint offset
 	int feedforward;
-      int Kp, Ki, Kd;
+    int Kp, Ki, Kd;
 	int Kaw;  // anti-windup gain
 } pidPos;
 

@@ -177,15 +177,6 @@ unsigned long temp;
 
 }
 
-// from steering?
-void pidSetInputSameRuntime(int pid_num, int input_val){
-    pidObjs[pid_num].v_input = input_val;
-    //zero out running PID values
-    pidObjs[pid_num].i_error = 0;
-    pidObjs[pid_num].p = 0;
-    pidObjs[pid_num].i = 0;
-    pidObjs[pid_num].d = 0;
-}
 
 // from cmd.c  PID set gains
 void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff){
@@ -341,8 +332,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
         if (t1_ticks == T1_MAX) t1_ticks = 0;
         t1_ticks++;
         pidGetState();	// always update state, even if motor is coasting
-        // only update tracking setpoint if time has not yet expired
         for (j = 0; j< NUM_PIDS; j++) {
+        // only update tracking setpoint if time has not yet expired
             if (pidObjs[j].onoff) {
                 pidGetSetpoint(j);
             }
@@ -352,14 +343,14 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
         if(pidObjs[0].onoff && !uart_tx_flag) {
             telemGetPID();
 
-            uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
-            if(uart_tx_packet != NULL) {
-                //time|Left pstate|Right pstate|Commanded Left pstate| Commanded Right pstate|DCR|DCL|RBEMF|LBEMF|Gyrox|Gyroy|Gyroz|Ax|Ay|Az
-                //bytes: 4,4,4,4,4,2,2,2,2,2,2,2,2,2,2
-                paySetType(uart_tx_packet->payload, CMD_PID_TELEMETRY);
-                paySetStatus(uart_tx_packet->payload, 0);
-                paySetData(uart_tx_packet->payload, sizeof(telemStruct_t), (unsigned char *) &telemPIDdata);
-                uart_tx_flag = 1;
+            // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
+            // if(uart_tx_packet != NULL) {
+            //     //time|Left pstate|Right pstate|Commanded Left pstate| Commanded Right pstate|DCR|DCL|RBEMF|LBEMF|Gyrox|Gyroy|Gyroz|Ax|Ay|Az
+            //     //bytes: 4,4,4,4,4,2,2,2,2,2,2,2,2,2,2
+            //     paySetType(uart_tx_packet->payload, CMD_PID_TELEMETRY);
+            //     paySetStatus(uart_tx_packet->payload, 0);
+            //     paySetData(uart_tx_packet->payload, sizeof(telemStruct_t), (unsigned char *) &telemPIDdata);
+            //     uart_tx_flag = 1;
             }
         }
     }
