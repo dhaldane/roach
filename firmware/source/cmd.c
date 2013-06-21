@@ -128,6 +128,9 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 // =============================================================================================================
 
 unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    pidObjs[0].timeFlag = 1;
+    pidObjs[1].timeFlag = 1;
+    
     return 1;
 }
 unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){

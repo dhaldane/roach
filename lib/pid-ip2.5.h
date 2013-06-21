@@ -43,6 +43,7 @@ typedef struct
   	long preSat; // output value before saturations
 	int  output;	 //  control output u
  	char onoff; //boolean
+ 	char timeFlag
 	unsigned long run_time;
 	unsigned long start_time;
 	int inputOffset;  // BEMF setpoint offset
@@ -97,7 +98,6 @@ void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel);
 void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff);
 //void SetupTimer1(void);
 void pidSetInput(int pid_num, int input_val);
-void pidSetInputSameRuntime(int pid_num, int input_val);
 void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff);
 void pidGetState(); // update state vector from bemf and Hall angle
 void pidGetSetpoint(int j);

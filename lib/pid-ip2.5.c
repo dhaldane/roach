@@ -177,6 +177,9 @@ unsigned long temp;
 
 }
 
+void pidStartTimedTrial(unsigned int run_time){
+    
+}
 
 // from cmd.c  PID set gains
 void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff){
