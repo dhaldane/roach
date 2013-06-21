@@ -13,7 +13,7 @@
 #include "dfmem.h"
 #include "tests.h"
 #include "version.h"
-#include "radio_settings.h"
+#include "settings.h"
 #include "timer.h"
 #include "tih.h"
 #include "pid-ip2.5.h"

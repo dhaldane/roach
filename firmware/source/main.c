@@ -23,7 +23,7 @@
 #include "radio.h"
 #include "tih.h"
 #include "ams-enc.h"
-#include "radio_settings.h"
+#include "settings.h"
 #include "tests.h" // TODO (fgb) : define/includes need to live elsewhere
 #include "dfmem.h"
 #include "interrupts.h"
