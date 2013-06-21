@@ -253,15 +253,14 @@ def flashReadback(numSamples, params):
     fileout.close()
     print "data saved to ",shared.dataFileName
         
-def writeFileHeader(dataFileName):
-    global cycle
+def writeFileHeader(dataFileName, params):
     fileout = open(dataFileName,'w')
     #write out parameters in format which can be imported to Excel
     today = time.localtime()
     date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
-    fileout.write('"%  Frequency(Hz)         = ' +repr(1000/cycle) + '"\n')
+    fileout.write('"%  Velocity(m/s)         = ' +repr(params.vel) + '"\n')
     fileout.write('"%  keyboard_telem with hall effect "\n')
     fileout.write('"%  motorgains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')

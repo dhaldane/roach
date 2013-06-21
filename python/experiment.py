@@ -42,7 +42,7 @@ def main():
             root     = path + dt_str + '_' + name
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
-            eraseFlashMem(numSamples)
+            eraseFlashMem()
 
 
         numSamples = int(ceil(300 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
