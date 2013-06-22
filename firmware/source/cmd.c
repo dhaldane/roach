@@ -19,6 +19,7 @@
 #include "pid-ip2.5.h"
 #include "ams-enc.h"
 #include "carray.h"
+#include "telem.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -48,7 +49,7 @@ static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsign
 
 //Experiment/Flash Commands
 static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 /*-----------------------------------------------------------------------------
@@ -68,7 +69,7 @@ void cmdSetup(void) {
     cmd_func[CMD_PID_START_MOTORS] = &cmdPIDStartMotors;
     cmd_func[CMD_SET_PID_GAINS] = &cmdSetPIDGains;
     cmd_func[CMD_GET_AMS_POS] = &cmdGetAMSPos;
-    cmd_func[CMD_SPECIAL_TELEMETRY] = &cmdSpecialTelemetry;
+    cmd_func[CMD_START_TELEMETRY] = &cmdStartTelemetry;
     cmd_func[CMD_ERASE_SECTORS] = &cmdEraseSectors;
     cmd_func[CMD_FLASH_READBACK] = &cmdFlashReadback;
     cmd_func[CMD_SET_VEL_PROFILE] = &cmdSetVelProfile;
@@ -141,13 +142,22 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
 
     return 1;
 }
-unsigned char cmdSpecialTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    unsigned int numSamples = frame[0] + (frame[1] << 8);
+    if (numSamples != 0) {
+        telemSetStartTime(); // Start telemetry samples from approx 0 time
+        telemSetSamplesToSave(numSamples);
+    }
     return 1;
 }
 unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    unsigned int numSamples = frame[0] + (frame[1] << 8);
+    telemErase(numSamples);
     return 1;
 }
 unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    unsigned int numSamples = frame[0] + (frame[1] << 8);
+    telemReadbackSamples(numSamples);
     return 1;
 }
 

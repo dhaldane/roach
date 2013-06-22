@@ -52,7 +52,7 @@ void telemSetSamplesToSave(unsigned long n) {
 
 void telemSendDataDelay(telemStruct_t* sample, int delaytime_ms) {
 
-    radioSendData(RADIO_DEST_ADDR, 0, CMD_SPECIAL_TELEMETRY, telemPacketSize,
+    radioSendData(RADIO_DEST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,
            (unsigned char*) sample, 1 );
     
     delay_ms(delaytime_ms); // allow radio transmission time

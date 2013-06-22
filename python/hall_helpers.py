@@ -270,17 +270,15 @@ def writeFileHeader(dataFileName, params):
   #  fileout.write('time, Rlegs, Llegs, DCL, DCR, GyroX, GryoY, GryoZ, GryoZAvg, AX, AY, AZ, LBEMF, RBEMF, SteerOut\n')
     fileout.close()
 
-def eraseFlashMem():
-    xb_send(0, command.ERASE_SECTORS, pack('h',0))
+def eraseFlashMem(numSamples):
+    xb_send(0, command.ERASE_SECTORS, pack('h',numSamples))
     print "started erase, 3 second dwell"
     time.sleep(3)
 
 def startTelemetrySave(numSamples):
-    start = 0   # two byte start time to record
-    skip = 0    # store every other sample if = 1
-    temp=[numSamples,start,skip]
+    temp=[numSamples]
     print 'temp =',temp,'\n'
-    xb_send(0, command.START_TELEM, pack('3h',*temp))
+    xb_send(0, command.START_TELEMETRY, pack('h',*temp))
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.

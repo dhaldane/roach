@@ -18,12 +18,11 @@ pktFormat = { \
     command.SET_MOVE_QUEUE:         '', \
     command.SET_STEERING_GAINS:     '6h', \
     command.SOFTWARE_RESET:         '', \
-    command.SPECIAL_TELEMETRY:      '=LL'+16*'h', \
     command.ERASE_SECTORS:          'L', \
-    command.FLASH_READBACK:         '', \
+    command.FLASH_READBACK:         '='5*'L'+11*'h', \
     command.SLEEP:                  'b', \
     command.ECHO:                   'c' ,\
-    command.SET_VEL_PROFILE:        '24h' ,\
+    command.SET_VEL_PROFILE:        '8h' ,\
     command.WHO_AM_I:               '', \
     command.ZERO_POS:               '=2l', \
     }
@@ -92,8 +91,8 @@ def xbee_received(packet):
             if (datum[0] != -1):
                 for i in range(pp):
                     shared.imudata.append(datum[4*i:4*(i+1)] )
-        # SPECIAL_TELEMETRY
-        elif type == command.SPECIAL_TELEMETRY:
+        # FLASH_READBACK
+        elif type == command.FLASH_READBACK:
             shared.pkts = shared.pkts + 1
             #print "Special Telemetry Data Packet, ",shared.pkts
             datum = unpack(pattern, data)

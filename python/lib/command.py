@@ -59,7 +59,6 @@ GET_IMU_LOOP_ZGYRO      =   0x85
 SET_MOVE_QUEUE          =   0x86
 SET_STEERING_GAINS      =   0x87
 SOFTWARE_RESET          =   0x88
-SPECIAL_TELEMETRY       =   0x89
 ERASE_SECTORS           =   0x8A
 FLASH_READBACK          =   0x8B
 SLEEP                   =   0x8C
