@@ -64,7 +64,7 @@ FLASH_READBACK          =   0x8B
 SLEEP                   =   0x8C
 SET_VEL_PROFILE         =   0x8D
 WHO_AM_I                =   0x8E
-START_TELEM             =   0x8F
+START_TELEMETRY         =   0x8F
 ZERO_POS                =   0x90
 START_TIMED_RUN         =   0x91
 
