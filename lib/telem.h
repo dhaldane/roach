@@ -14,6 +14,11 @@ typedef struct {
     TELEM_TYPE telemData;
 } telemStruct_t;
 
+typedef union packedTelemUnion {
+    vrTelemStruct_t telemStruct;
+    unsigned char dataArray[sizeof(telemStruct_t)];
+} telemU;
+
 // Prototypes
 void telemSetup(); //To be called in main
 void telemReadbackSamples(unsigned long);
@@ -25,8 +30,3 @@ void telemSetStartTime(void);
 void telemGetSample(unsigned long sampNum, unsigned int sampLen, unsigned char *data);
 
 #endif  // __TELEM_H
-
-typedef union packedTelemUnion {
-    vrTelemStruct_t telemStruct;
-    unsigned char dataArray[sizeof(telemStruct_t)];
-} telemU;

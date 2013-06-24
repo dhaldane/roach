@@ -25,8 +25,8 @@ unsigned int telemPacketSize;
 
 ////////   Private variables   ////////////////
 
-static unsigned long samplesToSave = 0;
-static unsigned long sampIdx = 0;
+unsigned long samplesToSave;
+unsigned long sampIdx = 0;
 
 
 //Offset for time value when recording samples

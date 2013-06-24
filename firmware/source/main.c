@@ -26,6 +26,7 @@
 #include "settings.h"
 #include "tests.h" // TODO (fgb) : define/includes need to live elsewhere
 #include "dfmem.h"
+#include "telem.h"
 #include "interrupts.h"
 #include "mpu6000.h"
 #include "sclock.h"
@@ -79,8 +80,11 @@ int main() {
     amsEncoderSetup();
     mpuSetup(1);
     tiHSetup();
-
+    dfmemSetup(0);
+    telemSetup();
     pidSetup();
+
+    DisableIntT1; //Check conflicts with DMA interrupts
 
     LED_1 = 0;
     LED_3 = 1;

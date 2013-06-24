@@ -202,7 +202,6 @@ void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff){
 //============================Telemetry==================================================
 #define	CMD_PID_TELEMETRY	0x83
 
-int samplesToSave;
 int gdata[3];	//gyrodata
 int xldata[3];  // accelerometer data 
 
@@ -235,6 +234,9 @@ void telemGetPID() {
     telemPIDdata.telemStruct.accelY = xldata[1];
     telemPIDdata.telemStruct.accelZ = xldata[2];
     telemPIDdata.telemStruct.Vbatt = (int) adcGetVbatt();
+
+    // Save Data to flash
+    telemSaveData(&telemPIDdata);
     return;
 }
 
