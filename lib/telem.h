@@ -19,6 +19,7 @@ typedef struct {
 void telemSetup(); //To be called in main
 void telemReadbackSamples(unsigned long);
 void telemSaveData(telemStruct_t *data);
+void telemGetPID();
 void telemSetSamplesToSave(unsigned long n);
 void telemErase(unsigned long);
 void telemSetSkip(unsigned int skipnum);

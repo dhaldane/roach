@@ -99,6 +99,7 @@ def xbee_received(packet):
             datum = list(datum)
             telem_index = datum.pop(0)
             print "Special Telemetry Data Packet #",telem_index
+            print datum
             if (datum[0] != -1) and (telem_index) >= 0:
                 shared.imudata[telem_index] = datum
                 shared.bytesIn = shared.bytesIn + (6*4 + 11*2)

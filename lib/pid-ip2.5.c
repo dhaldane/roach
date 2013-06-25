@@ -199,54 +199,6 @@ void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff){
 	pidObjs[pid_num].feedforward = ff;
 }
 
-//============================Telemetry==================================================
-#define	CMD_PID_TELEMETRY	0x83
-
-int gdata[3];	//gyrodata
-int xldata[3];  // accelerometer data 
-
-// structure to keep track of telemetry recording
-
-extern int bemf[NUM_PIDS];
-extern unsigned long sampIdx, samplesToSave, telemStartTime;
-
-telemStruct_t telemPIDdata;
-
-// store current PID info into structure. Used by telemSaveSample and CmdGetPIDTelemetry
-void telemGetPID(){
-
-    telemPIDdata.telemData.posL = pidObjs[0].p_state;
-    telemPIDdata.telemData.posR = pidObjs[1].p_state;
-    telemPIDdata.telemData.composL = pidObjs[0].p_input;
-    telemPIDdata.telemData.composR = pidObjs[1].p_input;
-    telemPIDdata.telemData.dcL = pidObjs[0].output;	// left
-    telemPIDdata.telemData.dcR = pidObjs[1].output;	// right
-    telemPIDdata.telemData.bemfL = bemf[0];
-    telemPIDdata.telemData.bemfR = bemf[1];
-
-    mpuGetGyro(gdata);
-    mpuGetXl(xldata);
-
-    telemPIDdata.telemData.gyroX = gdata[0];
-    telemPIDdata.telemData.gyroY = gdata[1];
-    telemPIDdata.telemData.gyroZ = gdata[2];
-    telemPIDdata.telemData.accelX = xldata[0];
-    telemPIDdata.telemData.accelY = xldata[1];
-    telemPIDdata.telemData.accelZ = xldata[2];
-    telemPIDdata.telemData.Vbatt = (int) adcGetVbatt();
-
-    // Save Data to flash
-    if (samplesToSave > 0) {
-        telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
-        telemPIDdata.sampleIndex = sampIdx;
-
-        telemSaveData(&telemPIDdata);
-        sampIdx++;
-    }
-
-    return;
-}
-
 void pidOn(int pid_num){
 	pidObjs[pid_num].onoff = 1;
 	t1_ticks = 0;
@@ -345,8 +297,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     interrupt_count++;
 
     if(interrupt_count == 4) {
-        mpuBeginUpdate();
-        amsEncoderStartAsyncRead();
+        //mpuBeginUpdate();
+        //amsEncoderStartAsyncRead();
     } else if(interrupt_count == 5) {
         interrupt_count = 0;
 

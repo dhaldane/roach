@@ -1,4 +1,6 @@
 typedef struct {
+        unsigned long sampleIndex;
+        unsigned long timestamp;
         long posL;      // Hall angle position
         long posR;
         long composL;   // Commanded Hall angle position

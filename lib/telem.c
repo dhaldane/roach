@@ -10,6 +10,9 @@
 #include "sclock.h"
 #include "timer.h"
 #include "cmd.h" //for CMD codes
+#include "adc_pid.h"
+#include "mpu6000.h"
+#include "pid-ip2.5.h"
 #include <string.h> //for memcpy
 
 telemStruct_t telemBuffer;
@@ -35,7 +38,47 @@ unsigned long telemStartTime;
 
 static DfmemGeometryStruct mem_geo;
 
-///////////// Private functions //////////////
+// store current PID info into structure. Used by telemSaveSample and CmdGetPIDTelemetry
+
+int gdata[3];   //gyrodata
+int xldata[3];  // accelerometer data 
+extern int bemf[NUM_PIDS];
+extern pidPos pidObjs[NUM_PIDS];
+telemStruct_t telemPIDdata;
+
+void telemGetPID(){
+
+    // telemPIDdata.telemData.posL = pidObjs[0].p_state;
+    // telemPIDdata.telemData.posR = pidObjs[1].p_state;
+    // telemPIDdata.telemData.composL = pidObjs[0].p_input;
+    // telemPIDdata.telemData.composR = pidObjs[1].p_input;
+    // telemPIDdata.telemData.dcL = pidObjs[0].output; // left
+    // telemPIDdata.telemData.dcR = pidObjs[1].output; // right
+    // telemPIDdata.telemData.bemfL = bemf[0];
+    // telemPIDdata.telemData.bemfR = bemf[1];
+
+    // mpuGetGyro(gdata);
+    // mpuGetXl(xldata);
+
+    // telemPIDdata.telemData.gyroX = gdata[0];
+    // telemPIDdata.telemData.gyroY = gdata[1];
+    // telemPIDdata.telemData.gyroZ = gdata[2];
+    // telemPIDdata.telemData.accelX = xldata[0];
+    // telemPIDdata.telemData.accelY = xldata[1];
+    // telemPIDdata.telemData.accelZ = xldata[2];
+    // telemPIDdata.telemData.Vbatt = (int) adcGetVbatt();
+
+    // Save Data to flash
+    if (samplesToSave > 0) {
+        telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
+        telemPIDdata.sampleIndex = sampIdx;
+
+        telemSaveData(&telemPIDdata);
+        sampIdx++;
+    }
+
+    return;
+}
 
 void telemSetup() {
 
