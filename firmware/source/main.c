@@ -84,7 +84,6 @@ int main() {
     telemSetup();
     pidSetup();
 
-    DisableIntT1; //Check conflicts with DMA interrupts
 
     LED_1 = 0;
     LED_3 = 1;

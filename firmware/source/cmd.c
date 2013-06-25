@@ -153,6 +153,7 @@ unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsign
 unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
     telemErase(numSamples);
+    LED_RED = ~LED_RED;
     return 1;
 }
 unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){

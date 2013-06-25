@@ -113,7 +113,7 @@ void __attribute__((__interrupt__, no_auto_psv)) _DMACError(void)
 		DMACS0 = 0;
 
         INTCON1bits.DMACERR = 0;        //Clear the trap flag
-        while (1);
+        while (1){LED_1 = ~LED_1; delay_ms(50);};
 }
 
 

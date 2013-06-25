@@ -19,7 +19,7 @@ pktFormat = { \
     command.SET_STEERING_GAINS:     '6h', \
     command.SOFTWARE_RESET:         '', \
     command.ERASE_SECTORS:          'L', \
-    command.FLASH_READBACK:         '=5L'+11*'h', \
+    command.FLASH_READBACK:         '=6l'+'11h', \
     command.SLEEP:                  'b', \
     command.ECHO:                   'c' ,\
     command.SET_VEL_PROFILE:        '8h' ,\
@@ -38,8 +38,7 @@ def xbee_received(packet):
     status = ord(rf_data[0])
     type = ord(rf_data[1])
     print 'Received %d' % type
-    data = rf_data[2:]
-    
+    data = rf_data[2:]   
     
     #Record the time the packet is received, so command timeouts
     # can be done
@@ -94,14 +93,15 @@ def xbee_received(packet):
         # FLASH_READBACK
         elif type == command.FLASH_READBACK:
             shared.pkts = shared.pkts + 1
+            print "Got Flash"
             #print "Special Telemetry Data Packet, ",shared.pkts
             datum = unpack(pattern, data)
             datum = list(datum)
             telem_index = datum.pop(0)
-            #print "Special Telemetry Data Packet #",telem_index
+            print "Special Telemetry Data Packet #",telem_index
             if (datum[0] != -1) and (telem_index) >= 0:
                 shared.imudata[telem_index] = datum
-                shared.bytesIn = shared.bytesIn + (2*4 + 15*2)
+                shared.bytesIn = shared.bytesIn + (6*4 + 11*2)
         # ERASE_SECTORS
         elif type == command.ERASE_SECTORS:
             datum = unpack(pattern, data)

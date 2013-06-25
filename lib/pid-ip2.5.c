@@ -208,35 +208,42 @@ int xldata[3];  // accelerometer data
 // structure to keep track of telemetry recording
 
 extern int bemf[NUM_PIDS];
+extern unsigned long sampIdx, samplesToSave, telemStartTime;
 
-volatile telemU telemPIDdata;
+telemStruct_t telemPIDdata;
 
 // store current PID info into structure. Used by telemSaveSample and CmdGetPIDTelemetry
-void telemGetPID() {
-    telemPIDdata.telemStruct.timeStamp = (long)sclockGetTime();
+void telemGetPID(){
 
-    telemPIDdata.telemStruct.posL = pidObjs[0].p_state;
-    telemPIDdata.telemStruct.posR = pidObjs[1].p_state;
-    telemPIDdata.telemStruct.composL = pidObjs[0].p_input;
-    telemPIDdata.telemStruct.composR = pidObjs[1].p_input;
-    telemPIDdata.telemStruct.dcL = pidObjs[0].output;	// left
-    telemPIDdata.telemStruct.dcR = pidObjs[1].output;	// right
-    telemPIDdata.telemStruct.bemfL = bemf[0];
-    telemPIDdata.telemStruct.bemfR = bemf[1];
+    telemPIDdata.telemData.posL = pidObjs[0].p_state;
+    telemPIDdata.telemData.posR = pidObjs[1].p_state;
+    telemPIDdata.telemData.composL = pidObjs[0].p_input;
+    telemPIDdata.telemData.composR = pidObjs[1].p_input;
+    telemPIDdata.telemData.dcL = pidObjs[0].output;	// left
+    telemPIDdata.telemData.dcR = pidObjs[1].output;	// right
+    telemPIDdata.telemData.bemfL = bemf[0];
+    telemPIDdata.telemData.bemfR = bemf[1];
 
     mpuGetGyro(gdata);
     mpuGetXl(xldata);
 
-    telemPIDdata.telemStruct.gyroX = gdata[0];
-    telemPIDdata.telemStruct.gyroY = gdata[1];
-    telemPIDdata.telemStruct.gyroZ = gdata[2];
-    telemPIDdata.telemStruct.accelX = xldata[0];
-    telemPIDdata.telemStruct.accelY = xldata[1];
-    telemPIDdata.telemStruct.accelZ = xldata[2];
-    telemPIDdata.telemStruct.Vbatt = (int) adcGetVbatt();
+    telemPIDdata.telemData.gyroX = gdata[0];
+    telemPIDdata.telemData.gyroY = gdata[1];
+    telemPIDdata.telemData.gyroZ = gdata[2];
+    telemPIDdata.telemData.accelX = xldata[0];
+    telemPIDdata.telemData.accelY = xldata[1];
+    telemPIDdata.telemData.accelZ = xldata[2];
+    telemPIDdata.telemData.Vbatt = (int) adcGetVbatt();
 
     // Save Data to flash
-    telemSaveData(&telemPIDdata);
+    if (samplesToSave > 0) {
+        telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
+        telemPIDdata.sampleIndex = sampIdx;
+
+        telemSaveData(&telemPIDdata);
+        sampIdx++;
+    }
+
     return;
 }
 
@@ -365,7 +372,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
         }
         pidSetControl();
 
-        if(pidObjs[0].onoff && !uart_tx_flag) {
+        if(pidObjs[0].onoff) {
             telemGetPID();
 
             // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));

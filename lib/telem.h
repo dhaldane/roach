@@ -11,13 +11,9 @@
 //Telemetry packet structure
 typedef struct {
     unsigned long sampleIndex;
+    unsigned long timestamp;
     TELEM_TYPE telemData;
 } telemStruct_t;
-
-typedef union packedTelemUnion {
-    vrTelemStruct_t telemStruct;
-    unsigned char dataArray[sizeof(telemStruct_t)];
-} telemU;
 
 // Prototypes
 void telemSetup(); //To be called in main

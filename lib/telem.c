@@ -8,6 +8,7 @@
 #include "at86rf231_driver.h"
 #include "led.h"
 #include "sclock.h"
+#include "timer.h"
 #include "cmd.h" //for CMD codes
 #include <string.h> //for memcpy
 
@@ -30,7 +31,7 @@ unsigned long sampIdx = 0;
 
 
 //Offset for time value when recording samples
-static unsigned long telemStartTime = 0;
+unsigned long telemStartTime;
 
 static DfmemGeometryStruct mem_geo;
 
@@ -53,10 +54,10 @@ void telemSetSamplesToSave(unsigned long n) {
 void telemSendDataDelay(telemStruct_t* sample, int delaytime_ms) {
 
     radioSendData(RADIO_DEST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,
-           (unsigned char*) sample, 1 );
+           (unsigned char*) sample, 0 );
     
     delay_ms(delaytime_ms); // allow radio transmission time
-
+    LED_2 = ~LED_2;
 }
 
 void telemReadbackSamples(unsigned long numSamples) {
@@ -68,7 +69,7 @@ void telemReadbackSamples(unsigned long numSamples) {
     //_T1IE = 0; _T5IE=0; //TODO: what is a cleaner way to do this?
 
     telemStruct_t sampleData;
-
+    DisableIntT1;
     for (i = 0; i < numSamples; i++) {
         //Retireve data from flash
         telemGetSample(i, sizeof (sampleData), (unsigned char*) (&sampleData));
@@ -82,7 +83,7 @@ void telemReadbackSamples(unsigned long numSamples) {
         } while (trxGetLastACKd() == 0);
         delaytime_ms = READBACK_DELAY_TIME_MS;
     }
-
+    EnableIntT1;
     LED_GREEN = 0;
 
 }
@@ -124,6 +125,7 @@ void telemErase(unsigned long numSamples) {
     //Sector 0a and 0b will be erased together always, for simplicity
     //Note that numSectors will be the actual number of sectors to erase,
     //   even though the sectors themselves are numbered starting at '0'
+    DisableIntT1;
     dfmemEraseSector(0); //Erase Sector 0a
     dfmemEraseSector(8); //Erase Sector 0b
 
@@ -138,6 +140,7 @@ void telemErase(unsigned long numSamples) {
         dfmemEraseSector(firstPageOfSector);
     }
 
+    EnableIntT1;
     //Leadout flash, should blink faster than above, indicating the last sector
     //while (!dfmemIsReady()) {
     //    LED_2 = ~LED_2;

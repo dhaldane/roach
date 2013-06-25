@@ -19,7 +19,7 @@ def main():
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [1800,0,400,0,0, 1800,0,400,0,0]
-    duration = 2000
+    duration = 500
     vel = 0
     turn_rate = 0
     telemetry = True
@@ -42,7 +42,7 @@ def main():
             root     = path + dt_str + '_' + name
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
-            numSamples = int(ceil(300 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
+            numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
             eraseFlashMem(numSamples)
 
 
