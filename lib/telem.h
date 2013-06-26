@@ -8,12 +8,10 @@
 #error "A telemtry type is not defined."
 #endif
 
-//Telemetry packet structure
-typedef struct {
-    unsigned long sampleIndex;
-    unsigned long timestamp;
-    TELEM_TYPE telemData;
-} telemStruct_t;
+// //Telemetry packet structure
+// typedef struct {
+//     TELEM_TYPE telemData;
+// } telemStruct_t;
 
 // Prototypes
 void telemSetup(); //To be called in main

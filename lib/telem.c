@@ -73,7 +73,7 @@ void telemGetPID(){
         telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
         telemPIDdata.sampleIndex = sampIdx;
 
-        telemSaveData(&telemPIDdata);
+        samplesToSave--; //telemSaveData(&telemPIDdata);
         sampIdx++;
     }
 
@@ -85,7 +85,7 @@ void telemSetup() {
     dfmemGetGeometryParams(&mem_geo); // Read memory chip sizing
 
     //Telemetry packet size is set at startupt time.
-    telemDataSize = sizeof (TELEM_TYPE); //OctoRoACH specific
+    telemDataSize = sizeof (telemStruct_t); //OctoRoACH specific
     telemPacketSize = sizeof (telemStruct_t);
 }
 
@@ -106,7 +106,7 @@ void telemSendDataDelay(telemStruct_t* sample, int delaytime_ms) {
 void telemReadbackSamples(unsigned long numSamples) {
     int delaytime_ms = READBACK_DELAY_TIME_MS;
     unsigned long i = 0; //will actually be the same as the sampleIndex
-
+    unsigned long debug=0;
     LED_GREEN = 1;
     //Disable motion interrupts for readback
     //_T1IE = 0; _T5IE=0; //TODO: what is a cleaner way to do this?
@@ -116,6 +116,7 @@ void telemReadbackSamples(unsigned long numSamples) {
     for (i = 0; i < numSamples; i++) {
         //Retireve data from flash
         telemGetSample(i, sizeof (sampleData), (unsigned char*) (&sampleData));
+        debug = sampleData.sampleIndex;
         //Reliable send, with linear backoff
         do {
             //debugpins1_set();
@@ -182,7 +183,6 @@ void telemErase(unsigned long numSamples) {
         //Send actual erase command
         dfmemEraseSector(firstPageOfSector);
     }
-
     EnableIntT1;
     //Leadout flash, should blink faster than above, indicating the last sector
     //while (!dfmemIsReady()) {

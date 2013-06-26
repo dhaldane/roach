@@ -16,4 +16,4 @@ typedef struct {
         int bemfL;
         int bemfR;
         int Vbatt; // battery voltage
-    } vrTelemStruct_t;
+    } telemStruct_t;
