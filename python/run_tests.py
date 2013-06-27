@@ -85,7 +85,8 @@ if __name__ == '__main__':
 
             elif keypress == 'w':
                 ts.test_mpu()
-
+            elif keypress == 'd':
+                ts.test_dflash()
             elif keypress == 't':
                 print 'Current duration '+str(duration)+', New duration in ms:',
                 duration = int(raw_input())    

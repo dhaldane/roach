@@ -114,6 +114,7 @@ class TestSuite():
         if typeID == kTestAccelCmd or typeID == kTestGyroCmd:
             print unpack('3h', rf_data[2:])
         elif typeID == kTestDFlashCmd:
+            print "Got flash test packet"
             print ''.join(rf_data[2:])
         elif typeID == kTestMotorCmd:
             print unpack('50H', rf_data[2:])
