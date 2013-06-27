@@ -48,32 +48,32 @@ telemStruct_t telemPIDdata;
 
 void telemGetPID(){
 
-    // telemPIDdata.telemData.posL = pidObjs[0].p_state;
-    // telemPIDdata.telemData.posR = pidObjs[1].p_state;
-    // telemPIDdata.telemData.composL = pidObjs[0].p_input;
-    // telemPIDdata.telemData.composR = pidObjs[1].p_input;
-    // telemPIDdata.telemData.dcL = pidObjs[0].output; // left
-    // telemPIDdata.telemData.dcR = pidObjs[1].output; // right
-    // telemPIDdata.telemData.bemfL = bemf[0];
-    // telemPIDdata.telemData.bemfR = bemf[1];
+    telemPIDdata.posL = pidObjs[0].p_state;
+    telemPIDdata.posR = pidObjs[1].p_state;
+    telemPIDdata.composL = pidObjs[0].p_input;
+    telemPIDdata.composR = pidObjs[1].p_input;
+    telemPIDdata.dcL = pidObjs[0].output; // left
+    telemPIDdata.dcR = pidObjs[1].output; // right
+    telemPIDdata.bemfL = bemf[0];
+    telemPIDdata.bemfR = bemf[1];
 
-    // mpuGetGyro(gdata);
-    // mpuGetXl(xldata);
+    mpuGetGyro(gdata);
+    mpuGetXl(xldata);
 
-    // telemPIDdata.telemData.gyroX = gdata[0];
-    // telemPIDdata.telemData.gyroY = gdata[1];
-    // telemPIDdata.telemData.gyroZ = gdata[2];
-    // telemPIDdata.telemData.accelX = xldata[0];
-    // telemPIDdata.telemData.accelY = xldata[1];
-    // telemPIDdata.telemData.accelZ = xldata[2];
-    // telemPIDdata.telemData.Vbatt = (int) adcGetVbatt();
+    telemPIDdata.gyroX = gdata[0];
+    telemPIDdata.gyroY = gdata[1];
+    telemPIDdata.gyroZ = gdata[2];
+    telemPIDdata.accelX = xldata[0];
+    telemPIDdata.accelY = xldata[1];
+    telemPIDdata.accelZ = xldata[2];
+    telemPIDdata.Vbatt = (int) adcGetVbatt();
 
     // Save Data to flash
     if (samplesToSave > 0) {
         telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
         telemPIDdata.sampleIndex = sampIdx;
 
-        samplesToSave--; //telemSaveData(&telemPIDdata);
+        telemSaveData(&telemPIDdata);
         sampIdx++;
     }
 

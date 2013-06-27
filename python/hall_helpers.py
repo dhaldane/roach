@@ -230,24 +230,24 @@ def sendWhoAmI():
 
 def flashReadback(numSamples, params):
     delay = 0.025
-    raw_input("Press any key to start readback of %d packets ..." % numSamples)
+    # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
-    shared.imudata = []  # reset imudata structure
+    shared.imudata = [ [] ] * numSamples  # reset imudata structure
     shared.pkts = 0  # reset packet count???
     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
     # While waiting, write parameters to start of file
     writeFileHeader(shared.dataFileName, params)     
-    time.sleep(delay*numSamples + 3)
-    while shared.pkts != numSamples:
-        print "Retry"
-        shared.imudata = []
-        shared.pkts = 0
-        xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
-        time.sleep(delay*numSamples + 3)
-        if shared.pkts > numSamples:
-            print "too many packets"
-            break
-    print "readback done"
+    time.sleep(delay*numSamples + 1)
+    # while shared.pkts != numSamples:
+    #     print "Retry"
+    #     shared.imudata = [ [] ] * numSamples
+    #     shared.pkts = 0
+    #     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
+    #     time.sleep(delay*numSamples + 3)
+    #     if shared.pkts > numSamples:
+    #         print "too many packets"
+    #         break
+    raw_input("Readback Done?")
     fileout = open(shared.dataFileName, 'a')
     np.savetxt(fileout , np.array(shared.imudata), '%d', delimiter = ',')
     fileout.close()
@@ -261,13 +261,12 @@ def writeFileHeader(dataFileName, params):
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
     fileout.write('"%  Velocity(m/s)         = ' +repr(params.vel) + '"\n')
-    fileout.write('"%  keyboard_telem with hall effect "\n')
-    fileout.write('"%  motorgains    = ' + repr(params.motorgains) + '\n')
+    fileout.write('"%  Angular velocity(rad/s)         = ' +repr(params.turn_rate) + '"\n')
+    fileout.write('"%  Experiment.py "\n')
+    fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')
     # order for wiring on RF Turner
-    fileout.write('"% time | Rlegs | Llegs | DCR | DCL | GyroX | GryoY | GryoZ | GryoZAvg | AX | AY | AZ | RBEMF | LBEMF "\n')
- #   fileout.write('"% time | Rlegs | Llegs | DCL | DCR | GyroX | GryoY | GryoZ | GryoZAvg | AX | AY | AZ | LBEMF | RBEMF | SteerOut"\n')
-  #  fileout.write('time, Rlegs, Llegs, DCL, DCR, GyroX, GryoY, GryoZ, GryoZAvg, AX, AY, AZ, LBEMF, RBEMF, SteerOut\n')
+    fileout.write('"% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt "\n')
     fileout.close()
 
 def eraseFlashMem(numSamples):

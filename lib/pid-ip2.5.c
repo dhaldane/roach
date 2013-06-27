@@ -297,8 +297,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     interrupt_count++;
 
     if(interrupt_count == 4) {
-        //mpuBeginUpdate();
-        //amsEncoderStartAsyncRead();
+        mpuBeginUpdate();
+        amsEncoderStartAsyncRead();
     } else if(interrupt_count == 5) {
         interrupt_count = 0;
 

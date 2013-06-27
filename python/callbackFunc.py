@@ -93,7 +93,6 @@ def xbee_received(packet):
         # FLASH_READBACK
         elif type == command.FLASH_READBACK:
             shared.pkts = shared.pkts + 1
-            print "Got Flash"
             #print "Special Telemetry Data Packet, ",shared.pkts
             datum = unpack(pattern, data)
             datum = list(datum)
@@ -102,7 +101,7 @@ def xbee_received(packet):
             print datum
             if (datum[0] != -1) and (telem_index) >= 0:
                 shared.imudata[telem_index] = datum
-                shared.bytesIn = shared.bytesIn + (6*4 + 11*2)
+                shared.bytesIn = shared.bytesIn + (5*4 + 11*2)
         # ERASE_SECTORS
         elif type == command.ERASE_SECTORS:
             datum = unpack(pattern, data)

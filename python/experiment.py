@@ -47,7 +47,6 @@ def main():
 
 
         shared.imudata = [ [] ] * numSamples
-        
 
         # Pause and wait to start run, including leadin time
         raw_input("Press enter to start run ...") 
