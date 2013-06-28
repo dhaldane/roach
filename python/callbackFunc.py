@@ -37,7 +37,7 @@ def xbee_received(packet):
    
     status = ord(rf_data[0])
     type = ord(rf_data[1])
-    print 'Received %d' % type
+    # print 'Received %d' % type
     data = rf_data[2:]   
     
     #Record the time the packet is received, so command timeouts
@@ -98,7 +98,7 @@ def xbee_received(packet):
             datum = list(datum)
             telem_index = datum.pop(0)
             print "Special Telemetry Data Packet #",telem_index
-            print datum
+            # print datum
             if (datum[0] != -1) and (telem_index) >= 0:
                 shared.imudata[telem_index] = datum
                 shared.bytesIn = shared.bytesIn + (5*4 + 11*2)

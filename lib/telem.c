@@ -94,19 +94,15 @@ void telemSetSamplesToSave(unsigned long n) {
     sampIdx = 0;
 }
 
-void telemSendDataDelay(telemStruct_t* sample, int delaytime_ms) {
+void telemSendDataDelay(telemStruct_t* sample) {
 
     radioSendData(RADIO_DEST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,
            (unsigned char*) sample, 0 );
-    
-    delay_ms(delaytime_ms); // allow radio transmission time
     LED_2 = ~LED_2;
 }
 
 void telemReadbackSamples(unsigned long numSamples) {
-    int delaytime_ms = READBACK_DELAY_TIME_MS;
     unsigned long i = 0; //will actually be the same as the sampleIndex
-    unsigned long debug=0;
     LED_GREEN = 1;
     //Disable motion interrupts for readback
     //_T1IE = 0; _T5IE=0; //TODO: what is a cleaner way to do this?
@@ -116,16 +112,8 @@ void telemReadbackSamples(unsigned long numSamples) {
     for (i = 0; i < numSamples; i++) {
         //Retireve data from flash
         telemGetSample(i, sizeof (sampleData), (unsigned char*) (&sampleData));
-        debug = sampleData.sampleIndex;
-        //Reliable send, with linear backoff
-        do {
-            //debugpins1_set();
-            telemSendDataDelay(&sampleData, delaytime_ms);
-            //Linear backoff
-            delaytime_ms += 0;
-            //debugpins1_clr();
-        } while (trxGetLastACKd() == 0);
-        delaytime_ms = READBACK_DELAY_TIME_MS;
+        telemSendDataDelay(&sampleData);
+
     }
     EnableIntT1;
     LED_GREEN = 0;
