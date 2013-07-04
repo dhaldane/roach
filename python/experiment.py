@@ -18,7 +18,7 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,0,400,0,0, 1800,0,400,0,0]
+    motorgains = [1800,20,100,0,0, 1800,20,100,0,0]
     duration = 500
     vel = 0
     turn_rate = 0

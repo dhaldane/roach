@@ -11,6 +11,7 @@
 #define GAIN_SCALER         100
 #define NUM_PIDS	2
 #define NUM_VELS	4 // 8 velocity setpoints per cycle
+#define NUM_BUFF 	2 // Number of strides buffered in to get setpoint
 
 
 /* The back emf constant can be measured by measuring velocity from Hall encoder 
@@ -53,6 +54,7 @@ typedef struct
 } pidPos;
 
 // structure for velocity control of leg cycle
+
 typedef struct
 { 
 	int interpolate;  				// intermediate value between setpoints

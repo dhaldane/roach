@@ -103,12 +103,10 @@ def setVelProfile(vel, turn_rate):
     # rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
     # temp = lVelAr + rVelAr
     print "Turn test. Enter leg frequency:",
-    p = 1.0/int(raw_input())
-    v = int(65536/(p*1000))
-    r = int(v/2)
-    vel = [v, v, v, v, r, r, v*2, v]
-    print vel
-    xb_send(0,command.SET_VEL_PROFILE, pack('8h',*vel))
+    p = 1000.0/int(raw_input())
+    delta = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
+    print delta
+    xb_send(0,command.SET_VEL_PROFILE, pack('10h',*delta))
 
     
 #get velocity profile

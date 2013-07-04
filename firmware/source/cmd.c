@@ -207,47 +207,44 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
 }
 
 unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS];
+    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period;
     int idx = 0, i = 0;
-
+    // Packet structure [Period, delta[NUM_VELS], Period, delta[NUM_VELS]]
+    period = frame[idx] + (frame[idx + 1]<<8);
+    idx+=2;
     for(i = 0; i < NUM_VELS; i ++) {
-        vel[i] = frame[idx]+ (frame[idx+1]<<8);
-		if(vel[i]<0){
-			delta[i] = -0x4000;   //hardcoded for now
-			interval[i] = delta[i]/vel[i];
-		} else if(vel[i]>0) {
-			delta[i] = 0x4000;
-			interval[i] = delta[i]/vel[i];
-		} else {
-			delta[i] = 0;
-			interval[i] = 100;	//Fudge factor
-		}
-		
+        interval[i] = period/NUM_VELS;
+        delta[i] = (frame[idx]+ (frame[idx+1]<<8));
+            if(delta[i]>=8192){
+                delta[i] = 8191;
+            } else if(delta[i] < -8192){
+                delta[i] = -8192;
+            }
+        delta[i] = delta[i]<<2;
+        vel[i] = delta[i]/interval[i];
         idx+=2;
     }
-
     setPIDVelProfile(0, interval, delta, vel);
-
+    
+    period = frame[idx] + (frame[idx + 1]<<8);
+    idx+=2;
     for(i = 0; i < NUM_VELS; i ++) {
-        vel[i] = frame[idx]+ (frame[idx+1]<<8);
-		if(vel[i]<0){
-			delta[i] = -0x4000;   //hardcoded for now
-			interval[i] = delta[i]/vel[i];
-		} else if(vel[i]>0) {
-			delta[i] = 0x4000;
-			interval[i] = delta[i]/vel[i];
-		} else {
-            delta[i] = 0;
-			interval[i] = 100;	//Fudge factor
-		}
-		
+        interval[i] = period/NUM_VELS;
+        delta[i] = (frame[idx]+ (frame[idx+1]<<8));
+            if(delta[i]>=8192){
+                delta[i] = 8191;
+            } else if(delta[i] < -8192){
+                delta[i] = -8192;
+            }
+        delta[i] = delta[i]<<2;
+        vel[i] = delta[i]/interval[i];
         idx+=2;
-    }
+        }
+
     setPIDVelProfile(1, interval, delta, vel);
 
     //Send confirmation packet
-    // WARNING: Will fail at high data throughput
-    //radioConfirmationPacket(RADIO_DEST_ADDR, CMD_SET_VEL_PROFILE, status, 48, frame);
+    // TODO : Send confirmation packet with packet index
     return 1; //success
 }
 

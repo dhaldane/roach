@@ -47,8 +47,9 @@
 pidPos pidObjs[NUM_PIDS];
 
 // structure for reference velocity for leg
-pidVelLUT  pidVel[NUM_PIDS];
-
+pidVelLUT  pidVel[NUM_PIDS*NUM_BUFF];
+pidVelLUT* activePID[NUM_PIDS];     //Pointer arrays for stride buffering
+pidVelLUT* nextPID[NUM_PIDS];
 
 #define T1_MAX 0xffffff  // max before rollover of 1 ms counter
 // may be glitch in longer missions at rollover
@@ -98,15 +99,17 @@ void pidSetup()
 // called from pidSetup()
 void initPIDVelProfile()
 { int i,j;
-	for(j = 0; j < NUM_PIDS; j++)
-	{    	pidVel[j].index = 0;  // point to first velocity
+	for(j = 0; j < NUM_PIDS; j++){
+	   	pidVel[j].index = 0;  // point to first velocity
 		pidVel[j].interpolate = 0; 
 		pidVel[j].leg_stride = 0;  // set initial leg count
-  		
-		for(i = 0; i < NUM_VELS; i++)
-		{   	// interpolate values between setpoints, <<4 for resolution
+  		activePID[j] = &(pidVel[j]);    //Initialize buffer pointers
+        nextPID[j] = NULL;
+
+		for(i = 0; i < NUM_VELS; i++){
+		  	// interpolate values between setpoints, <<4 for resolution
 			pidVel[j].interval[i] = 128;  // 128 ms intervals
-		       pidVel[j].delta[i] =  0x1000; // 1/16 rev
+		    pidVel[j].delta[i] =  0x1000; // 1/16 rev
 			pidVel[j].vel[i] = (pidVel[j].delta[i] << 8) / pidVel[j].interval[i];
 		 }
 		pidObjs[j].p_input = 0; // initialize first set point 
@@ -115,7 +118,15 @@ void initPIDVelProfile()
 	}
 }
 
-// set values from packet - leave previous motor_count, p_input, etc.
+//Returns pointer to non-active buffer
+void otherBuff(array, ptr){     
+    int active = NUM_PIDS*sizeof(pidVelLUT);
+    if((prt-array) > active){
+        return ptr - active;
+    } else {
+        return ptr + active;
+    }
+}
 // called from cmd.c
 void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel)
 { int i;
@@ -125,6 +136,7 @@ void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel)
 		pidVel[pid_num].vel[i]= vel[i];
 	}
 }
+
 
 // called from pidSetup()
 void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff)
@@ -343,29 +355,28 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
 }
 
 // update desired velocity and position tracking setpoints for each leg
-void pidGetSetpoint(int j)
-{ int index; long temp_v;
-		index = pidVel[j].index;		
-		// update desired position between setpoints, scaled by 256
-		pidVel[j].interpolate += pidVel[j].vel[index];
+void pidGetSetpoint(int j){
+    int index; long temp_v;
+    index = pidVel[j].index;		
+	// update desired position between setpoints, scaled by 256
+	pidVel[j].interpolate += pidVel[j].vel[index];
 
-	if (t1_ticks >= pidVel[j].expire)  // time to reach previous setpoint has passed
-	{ 		
+	if (t1_ticks >= pidVel[j].expire){ // time to reach previous setpoint has passed
 		pidVel[j].interpolate = 0;	
-		pidVel[j].index++;
-			if (pidVel[j].index >= NUM_VELS) 
-			{     pidVel[j].index = 0;
-				pidVel[j].leg_stride++;  // one full leg revolution
-	/**** maybe need to handle round off in position set point ***/
-			}  // loop on index
-        index = pidVel[j].index;
 		pidObjs[j].p_input += pidVel[j].delta[index];	//update to next set point
-		pidVel[j].expire += pidVel[j].interval[index];  // expire time for next interval
-		temp_v = ((long)pidVel[j].vel[index] * K_EMF)>>8;  // scale velocity to A/D units
-	    pidObjs[j].v_input = (int)(temp_v);	  //update to next velocity 
-		
+        pidVel[j].index++;
+            
+        if (pidVel[j].index >= NUM_VELS) {
+             pidVel[j].index = 0;
+             pidVel[j].leg_stride++;  // one full leg revolution
+    /**** maybe need to handle round off in position set point ***/
+        }  
+		pidVel[j].expire += pidVel[j].interval[pidVel[j].index];  // expire time for next interval
+	    //pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];	  //update to next velocity 
+		temp_v = ((long)pidVel[j].vel[pidVel[j].index] * K_EMF)>>8;  // scale velocity to A/D units
+        pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];    //update to next velocity 
 	}
-}
+}   
 
  // select either back emf or backwd diff for vel est
 #define VEL_BEMF 0
