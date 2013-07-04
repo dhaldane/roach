@@ -66,7 +66,8 @@ unsigned int offsetAccumulatorCounter;
 // 2 last readings for median filter
 int measLast1[NUM_PIDS];
 int measLast2[NUM_PIDS];
-int bemf[NUM_PIDS]; //used to store the true, unfiltered speed
+int bemf[NUM_PIDS];
+
 
 // -------------------------------------------
 // called from main()
@@ -86,7 +87,7 @@ void pidSetup()
 	
 	EnableIntT1; // turn on pid interrupts
 
-	//calibBatteryOffset(100); //???This is broken for 2.5
+	calibBatteryOffset(100); //???This is broken for 2.5
 }
 
 
@@ -375,7 +376,7 @@ void pidGetState()
 {   int i;
 	long p_state; 
 	unsigned long time_start, time_end; 
-	calib_flag = 0;  //BEMF disable
+//	calib_flag = 0;  //BEMF disable
 // get diff amp offset with motor off at startup time
 	if(calib_flag)
 	{ 	
@@ -391,7 +392,8 @@ void pidGetState()
 #endif
 	
 	time_start =  sclockGetTime();
-
+    bemf[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
+    bemf[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
 // only works to +-32K revs- might reset after certain number of steps? Should wrap around properly
 	for(i =0; i<NUM_PIDS; i++)
 	{     p_state = (long)(encPos[i].pos << 2);		// pos 14 bits 0x0 -> 0x3fff

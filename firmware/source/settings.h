@@ -19,7 +19,4 @@
 
 
 #endif //__RADIO_SETTINGS_H
-
- #define TELEM_TYPE vrTelemStruct_t
- #define TELEM_INCLUDE "vr-telem.h"
- #define TELEMPACKFUNC(x) orTelemGetData(x)
+#define TELEM_INCLUDE "vr-telem.h"

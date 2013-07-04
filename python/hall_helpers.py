@@ -99,11 +99,16 @@ def setVelProfile(vel, turn_rate):
     print "Sending velocity profile, V, w", vel, turn_rate
     rVel = 1043*vel + 80*turn_rate
     lVel = 1043*vel - 80*turn_rate
-    lVelAr = [int(lVel),int(lVel),int(lVel),int(lVel)]
-    rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
-    temp = lVelAr + rVelAr
-    print temp
-    xb_send(0,command.SET_VEL_PROFILE, pack('8h',*temp))
+    # lVelAr = [int(lVel),int(lVel),int(lVel),int(lVel)]
+    # rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
+    # temp = lVelAr + rVelAr
+    print "Turn test. Enter leg frequency:",
+    p = 1.0/int(raw_input())
+    v = int(65536/(p*1000))
+    r = int(v/2)
+    vel = [v, v, v, v, r, r, v*2, v]
+    print vel
+    xb_send(0,command.SET_VEL_PROFILE, pack('8h',*vel))
 
     
 #get velocity profile
@@ -229,7 +234,7 @@ def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
 
 def flashReadback(numSamples, params):
-    delay = 0.025
+    delay = 0.0045
     # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
     shared.imudata = [ [] ] * numSamples  # reset imudata structure
@@ -247,9 +252,9 @@ def flashReadback(numSamples, params):
     #     if shared.pkts > numSamples:
     #         print "too many packets"
     #         break
-    raw_input("Readback Done?")
+    raw_input("\nReadback Done?")
     fileout = open(shared.dataFileName, 'a')
-    np.savetxt(fileout , np.array(shared.imudata), '%d', delimiter = ',')
+    np.savetxt(fileout , np.array([e for e in shared.imudata if len(e)]), '%d', delimiter = ',') # Write non-empty lists in imudata to file
     fileout.close()
     print "data saved to ",shared.dataFileName
         
@@ -271,8 +276,7 @@ def writeFileHeader(dataFileName, params):
 
 def eraseFlashMem(numSamples):
     xb_send(0, command.ERASE_SECTORS, pack('h',numSamples))
-    print "started erase, 3 second dwell"
-    time.sleep(3)
+    print "Started erase, Enter to continue"
 
 def startTelemetrySave(numSamples):
     temp=[numSamples]

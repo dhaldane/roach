@@ -1,4 +1,3 @@
-// Contents of this file are copyright Andrew Pullin, 2013
 
 #include "utils.h"
 #include "settings.h"
@@ -15,17 +14,7 @@
 #include "pid-ip2.5.h"
 #include <string.h> //for memcpy
 
-telemStruct_t telemBuffer;
-unsigned int telemDataSize;
 unsigned int telemPacketSize;
-
-#if defined(__RADIO_HIGH_DATA_RATE)
-#define READBACK_DELAY_TIME_MS 3
-#else
-#define READBACK_DELAY_TIME_MS 10
-#endif
-
-#define TELEM_HEADER_SIZE   sizeof(telemBuffer.sampleIndex) + sizeof(telemBuffer.timestamp)
 
 ////////   Private variables   ////////////////
 
@@ -44,14 +33,15 @@ int gdata[3];   //gyrodata
 int xldata[3];  // accelerometer data 
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
+extern pidVelLUT  pidVel[NUM_PIDS];
 telemStruct_t telemPIDdata;
 
 void telemGetPID(){
 
     telemPIDdata.posL = pidObjs[0].p_state;
     telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input;
-    telemPIDdata.composR = pidObjs[1].p_input;
+    telemPIDdata.composL = pidObjs[0].p_input  + pidVel[0].interpolate;
+    telemPIDdata.composR = pidObjs[1].p_input  + pidVel[1].interpolate;
     telemPIDdata.dcL = pidObjs[0].output; // left
     telemPIDdata.dcR = pidObjs[1].output; // right
     telemPIDdata.bemfL = bemf[0];
@@ -85,7 +75,6 @@ void telemSetup() {
     dfmemGetGeometryParams(&mem_geo); // Read memory chip sizing
 
     //Telemetry packet size is set at startupt time.
-    telemDataSize = sizeof (telemStruct_t); //OctoRoACH specific
     telemPacketSize = sizeof (telemStruct_t);
 }
 
@@ -105,7 +94,6 @@ void telemReadbackSamples(unsigned long numSamples) {
     unsigned long i = 0; //will actually be the same as the sampleIndex
     LED_GREEN = 1;
     //Disable motion interrupts for readback
-    //_T1IE = 0; _T5IE=0; //TODO: what is a cleaner way to do this?
 
     telemStruct_t sampleData;
     DisableIntT1;

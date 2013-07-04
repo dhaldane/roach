@@ -33,6 +33,7 @@
 #include "spi_controller.h"
 #include "interrupts.h"
 #include "pid-ip2.5.h"
+#include "adc_pid.h"
 #include "cmd.h"
 #include "uart_driver.h"
 #include "ppool.h"
@@ -82,7 +83,9 @@ int main() {
     tiHSetup();
     dfmemSetup(0);
     telemSetup();
+    adcSetup();
     pidSetup();
+
 
 
     LED_1 = 0;

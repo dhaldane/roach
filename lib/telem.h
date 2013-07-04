@@ -2,16 +2,12 @@
 #define __TELEM_H
 
 #include "settings.h" //Required to set telemetry type
-#include TELEM_INCLUDE
 
-#ifndef TELEM_TYPE
-#error "A telemtry type is not defined."
+#ifndef TELEM_INCLUDE
+#error "A telemtry structure is not defined."
 #endif
 
-// //Telemetry packet structure
-// typedef struct {
-//     TELEM_TYPE telemData;
-// } telemStruct_t;
+#include TELEM_INCLUDE
 
 // Prototypes
 void telemSetup(); //To be called in main

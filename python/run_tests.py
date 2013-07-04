@@ -40,6 +40,7 @@
 
 import msvcrt, sys, traceback
 import test_suite
+import time
 
 
 #RADIO_DEV_NAME  = '/dev/tty.usbserial-*' or 'COMx'
@@ -49,8 +50,8 @@ BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
 
-motorgains = [1800,0,400,0,0,\
-              1800,0,400,0,0] #TUNE THESE
+motorgains = [1800,2000,400,0,0,\
+              1800,2000,400,0,0] #TUNE THESE
 duration = 2000
 
 
@@ -75,7 +76,7 @@ if __name__ == '__main__':
                 ts.PIDStart(duration)
 
             elif keypress == ' ':
-                ts.PIDSTAHP();
+                ts.PIDSTAHP()
 
             elif keypress == 'm':
                 ts.test_motorop()
@@ -91,7 +92,18 @@ if __name__ == '__main__':
                 print 'Current duration '+str(duration)+', New duration in ms:',
                 duration = int(raw_input())    
                 print 'Current duration '+str(duration)
-
+            elif keypress == 'r':
+                print "Turn test. Enter leg frequency:",
+                p = 1.0/int(raw_input())
+                v = int(65536/(p*1000))
+                r = int(v/2)
+                ts.defProfile([0,0,0,0,0,0,0,0])
+                ts.PIDStart(duration)
+                vel = [v, v, v, v, r, r, v*2, v]
+                ts.defProfile(vel)
+                time.sleep(5*p)
+                ts.PIDSTAHP()
+                print "Done"
             elif keypress == 'g':
                 ts.SetGains()
 

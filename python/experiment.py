@@ -24,6 +24,7 @@ def main():
     turn_rate = 0
     telemetry = True
     repeat = False
+    setVelProfile(0,0)
 
     params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
     setMotorGains(motorgains)
@@ -44,9 +45,6 @@ def main():
             print "Data file:  ", shared.dataFileName
             numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
             eraseFlashMem(numSamples)
-
-
-        shared.imudata = [ [] ] * numSamples
 
         # Pause and wait to start run, including leadin time
         raw_input("Press enter to start run ...") 
