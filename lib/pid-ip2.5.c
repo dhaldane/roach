@@ -119,22 +119,26 @@ void initPIDVelProfile()
 }
 
 //Returns pointer to non-active buffer
-void otherBuff(array, ptr){     
-    int active = NUM_PIDS*sizeof(pidVelLUT);
-    if((prt-array) > active){
-        return ptr - active;
+pidVelLUT* otherBuff(pidVelLUT* array, pidVelLUT* ptr){
+    if( ptr >= &(array[NUM_PIDS])){
+        return ptr - NUM_PIDS;
     } else {
-        return ptr + active;
+        return ptr + NUM_PIDS;
     }
 }
 // called from cmd.c
-void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel)
-{ int i;
-	for (i = 0; i < NUM_VELS; i++)
-	{ 	pidVel[pid_num].interval[i]= interval[i];
-		pidVel[pid_num].delta[i]= delta[i];
-		pidVel[pid_num].vel[i]= vel[i];
-	}
+void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel){
+    pidVelLUT* tempPID;
+    int i;
+    nextPID[pid_num] = NULL;
+    tempPID = otherBuff(pidVel, activePID[pid_num]);
+    for (i = 0; i < NUM_VELS; i++)
+    {
+        tempPID->interval[i]= interval[i];
+        tempPID->delta[i]= delta[i];
+        tempPID->vel[i]= vel[i];
+    }
+    nextPID[pid_num] = tempPID;
 }
 
 
