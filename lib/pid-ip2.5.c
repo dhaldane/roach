@@ -361,24 +361,30 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
 // update desired velocity and position tracking setpoints for each leg
 void pidGetSetpoint(int j){
     int index; long temp_v;
-    index = pidVel[j].index;		
+    index = pidObjs[j].index;		
 	// update desired position between setpoints, scaled by 256
-	pidVel[j].interpolate += pidVel[j].vel[index];
+	pidObjs[j].interpolate += activePID[j]->vel[index];
 
-	if (t1_ticks >= pidVel[j].expire){ // time to reach previous setpoint has passed
-		pidVel[j].interpolate = 0;	
-		pidObjs[j].p_input += pidVel[j].delta[index];	//update to next set point
-        pidVel[j].index++;
+	if (t1_ticks >= pidObjs[j].expire){ // time to reach previous setpoint has passed
+		pidObjs[j].interpolate = 0;	
+		pidObjs[j].p_input += activePID[j]->delta[index];	//update to next set point
+        pidObjs[j].index++;
             
-        if (pidVel[j].index >= NUM_VELS) {
-             pidVel[j].index = 0;
-             pidVel[j].leg_stride++;  // one full leg revolution
+        if (pidObjs[j].index >= NUM_VELS) {
+             pidObjs[j].index = 0;
+             pidObjs[j].leg_stride++;  // one full leg revolution
     /**** maybe need to handle round off in position set point ***/
+             if(nextPID[j] != NULL){    //Swap pointer if not null
+                CRITICAL_SECTION_START;
+                activePID[j] = nextPID[j];
+                nextPID[j] = NULL;
+                CRITICAL_SECTION_END;
+             }
         }  
-		pidVel[j].expire += pidVel[j].interval[pidVel[j].index];  // expire time for next interval
-	    //pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];	  //update to next velocity 
-		temp_v = ((long)pidVel[j].vel[pidVel[j].index] * K_EMF)>>8;  // scale velocity to A/D units
-        pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];    //update to next velocity 
+		pidObjs[j].expire += activePID[j]->interval[pidObjs[j].index];  // expire time for next interval
+	    //pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];	  //update to next velocity 
+		temp_v = ((long)activePID[j]->vel[pidObjs[j].index] * K_EMF)>>8;  // scale velocity to A/D units
+        pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];    //update to next velocity 
 	}
 }   
 
