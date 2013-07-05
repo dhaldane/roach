@@ -40,8 +40,8 @@ void telemGetPID(){
 
     telemPIDdata.posL = pidObjs[0].p_state;
     telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input  + pidVel[0].interpolate;
-    telemPIDdata.composR = pidObjs[1].p_input  + pidVel[1].interpolate;
+    telemPIDdata.composL = pidObjs[0].p_input  + pidObjs[0].interpolate;
+    telemPIDdata.composR = pidObjs[1].p_input  + pidObjs[1].interpolate;
     telemPIDdata.dcL = pidObjs[0].output; // left
     telemPIDdata.dcR = pidObjs[1].output; // right
     telemPIDdata.bemfL = bemf[0];

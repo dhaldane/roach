@@ -50,8 +50,7 @@ BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
 
-motorgains = [1800,2000,400,0,0,\
-              1800,2000,400,0,0] #TUNE THESE
+motorgains = [1800,20,100,0,0, 1800,20,100,0,0]
 duration = 2000
 
 
@@ -94,14 +93,18 @@ if __name__ == '__main__':
                 print 'Current duration '+str(duration)
             elif keypress == 'r':
                 print "Turn test. Enter leg frequency:",
-                p = 1.0/int(raw_input())
-                v = int(65536/(p*1000))
-                r = int(v/2)
-                ts.defProfile([0,0,0,0,0,0,0,0])
+                p = 1000.0/int(raw_input())
+                ts.defProfile([100,0,0,0,0,100,0,0,0,0])
                 ts.PIDStart(duration)
-                vel = [v, v, v, v, r, r, v*2, v]
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
                 ts.defProfile(vel)
-                time.sleep(5*p)
+                time.sleep(4.9*p/1000)
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
+                ts.defProfile(vel)
+                time.sleep(0.9*p/1000)
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+                ts.defProfile(vel)
+                time.sleep(5*p/1000)
                 ts.PIDSTAHP()
                 print "Done"
             elif keypress == 'g':
