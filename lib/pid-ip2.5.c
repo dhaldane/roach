@@ -100,9 +100,9 @@ void pidSetup()
 void initPIDVelProfile()
 { int i,j;
 	for(j = 0; j < NUM_PIDS; j++){
-	   	pidVel[j].index = 0;  // point to first velocity
-		pidVel[j].interpolate = 0; 
-		pidVel[j].leg_stride = 0;  // set initial leg count
+	   	pidObjs[j].index = 0;  // point to first velocity
+		pidObjs[j].interpolate = 0; 
+		pidObjs[j].leg_stride = 0;  // set initial leg count
   		activePID[j] = &(pidVel[j]);    //Initialize buffer pointers
         nextPID[j] = NULL;
 
@@ -184,11 +184,11 @@ unsigned long temp;
 /*   need to set index =0 initial values */
 /* position setpoints start at 0 (index=0), then interpolate until setpoint 1 (index =1), etc */
 	temp = 0;
-	pidVel[pid_num].expire = temp + (long) pidVel[pid_num].interval[0];   // end of first interval
-	pidVel[pid_num].interpolate = 0;	
+	pidObjs[pid_num].expire = temp + (long) pidVel[pid_num].interval[0];   // end of first interval
+	pidObjs[pid_num].interpolate = 0;	
 /*	pidObjs[pid_num].p_input += pidVel[pid_num].delta[0];	//update to first set point
 ***  this should be set only after first .expire time to avoid initial transients */
-	pidVel[pid_num].index =0; // reset setpoint index
+	pidObjs[pid_num].index =0; // reset setpoint index
 // set first move at t = 0
 //	pidVel[0].expire = temp;   // right side
 //	pidVel[1].expire = temp;   // left side
@@ -230,7 +230,7 @@ void pidZeroPos(int pid_num){
 // reset position setpoint as well
 	pidObjs[pid_num].p_input = 0;
 	pidObjs[pid_num].v_input = 0;
-	pidVel[pid_num].leg_stride = 0; // strides also reset 
+	pidObjs[pid_num].leg_stride = 0; // strides also reset 
 	EnableIntT1; // turn on pid interrupts
 }
 
@@ -361,24 +361,30 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
 // update desired velocity and position tracking setpoints for each leg
 void pidGetSetpoint(int j){
     int index; long temp_v;
-    index = pidVel[j].index;		
+    index = pidObjs[j].index;		
 	// update desired position between setpoints, scaled by 256
-	pidVel[j].interpolate += pidVel[j].vel[index];
+	pidObjs[j].interpolate += activePID[j]->vel[index];
 
-	if (t1_ticks >= pidVel[j].expire){ // time to reach previous setpoint has passed
-		pidVel[j].interpolate = 0;	
-		pidObjs[j].p_input += pidVel[j].delta[index];	//update to next set point
-        pidVel[j].index++;
+	if (t1_ticks >= pidObjs[j].expire){ // time to reach previous setpoint has passed
+		pidObjs[j].interpolate = 0;	
+		pidObjs[j].p_input += activePID[j]->delta[index];	//update to next set point
+        pidObjs[j].index++;
             
-        if (pidVel[j].index >= NUM_VELS) {
-             pidVel[j].index = 0;
-             pidVel[j].leg_stride++;  // one full leg revolution
+        if (pidObjs[j].index >= NUM_VELS) {
+             pidObjs[j].index = 0;
+             pidObjs[j].leg_stride++;  // one full leg revolution
     /**** maybe need to handle round off in position set point ***/
+             if(nextPID[j] != NULL){    //Swap pointer if not null
+                CRITICAL_SECTION_START;
+                activePID[j] = nextPID[j];
+                nextPID[j] = NULL;
+                CRITICAL_SECTION_END;
+             }
         }  
-		pidVel[j].expire += pidVel[j].interval[pidVel[j].index];  // expire time for next interval
-	    //pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];	  //update to next velocity 
-		temp_v = ((long)pidVel[j].vel[pidVel[j].index] * K_EMF)>>8;  // scale velocity to A/D units
-        pidObjs[j].v_input = pidVel[j].vel[pidVel[j].index];    //update to next velocity 
+		pidObjs[j].expire += activePID[j]->interval[pidObjs[j].index];  // expire time for next interval
+	    //pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];	  //update to next velocity 
+		temp_v = ((long)activePID[j]->vel[pidObjs[j].index] * K_EMF)>>8;  // scale velocity to A/D units
+        pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];    //update to next velocity 
 	}
 }   
 
@@ -416,7 +422,7 @@ void pidGetState()
 		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
 		if (i==0)
 		{
-			pidObjs[i].p_state = p_state; //fix fo encoder alignment
+			pidObjs[i].p_state = p_state; //fix for encoder alignment
 		}
 		else
 		{
@@ -487,7 +493,7 @@ void pidSetControl()
    {  //pidobjs[0] : right side
 	// p_input has scaled velocity interpolation to make smoother
 	// p_state is [16].[16]
-        	pidObjs[j].p_error = pidObjs[j].p_input + pidVel[j].interpolate  - pidObjs[j].p_state;
+        	pidObjs[j].p_error = pidObjs[j].p_input + pidObjs[j].interpolate  - pidObjs[j].p_state;
             pidObjs[j].v_error = pidObjs[j].v_input - pidObjs[j].v_state;  // v_input should be revs/sec
             //Update values
             UpdatePID(&(pidObjs[j]));

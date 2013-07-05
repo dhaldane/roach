@@ -182,17 +182,12 @@ class TestSuite():
 
     def SetProfile(self):
         header = chr(kStatusUnused) + chr(SetVelProfile)
-        delta = [0x4000,0x4000,0x4000,0x4000]
-        intervals = [128, 128, 128, 128]
         
-        print 'Enter vels <csv>: ',
-        x = raw_input()
-        if len(x):
-            vel = map(int,x.split(','))
-
-        temp = vel+vel
-        print 'Int, Delta, Vel: '+str(temp)
-        data_out = header + ''.join(pack("8h",*temp))
+        print "Turn test. Enter leg frequency:",
+        p = 1000.0/int(raw_input())
+        vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+        print vel
+        data_out = header + ''.join(pack("10h",*vel))
 
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
@@ -200,7 +195,7 @@ class TestSuite():
 
     def defProfile(self, vel):
         header = chr(kStatusUnused) + chr(SetVelProfile)
-        data_out = header + ''.join(pack("8h",*vel))
+        data_out = header + ''.join(pack("10h",*vel))
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
             time.sleep(0.2)

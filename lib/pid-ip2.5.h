@@ -51,19 +51,20 @@ typedef struct
 	int feedforward;
     int Kp, Ki, Kd;
 	int Kaw;  // anti-windup gain
+	//Leg control variables
+	int interpolate;  				// intermediate value between setpoints
+	unsigned long expire;		// end of current segment
+	int index;					// right index to moves
+	int leg_stride;
 } pidPos;
 
 // structure for velocity control of leg cycle
 
 typedef struct
 { 
-	int interpolate;  				// intermediate value between setpoints
-	unsigned long expire;		// end of current segment
-	int index;					// right index to moves
 	int interval[NUM_VELS];	// number of ticks between intervals
 	int delta[NUM_VELS];   // increments for right setpoint
 	int vel[NUM_VELS];     // velocity increments to setpoint, >>8
-	int leg_stride;
 } pidVelLUT;
 
 //Functions
