@@ -422,7 +422,7 @@ void pidGetState()
 		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
 		if (i==0)
 		{
-			pidObjs[i].p_state = p_state; //fix fo encoder alignment
+			pidObjs[i].p_state = p_state; //fix for encoder alignment
 		}
 		else
 		{

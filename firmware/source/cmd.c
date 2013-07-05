@@ -130,14 +130,13 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 
 unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
     unsigned int run_time = frame[0] + (frame[1] << 8);
+    int i;
+    for (i = 0; i < NUM_PIDS; i++){
+        pidObjs[i].timeFlag = 1;
+        pidSetInput(i, 0);
+        pidOn(i);
+    }
 
-    pidObjs[0].timeFlag = 1;
-    pidObjs[1].timeFlag = 1;
-
-    pidSetInput(0, 0);
-    pidOn(0);
-    pidSetInput(1, 0);
-    pidOn(1); 
     pidStartTimedTrial(run_time);
 
     return 1;
@@ -170,7 +169,7 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     int thrust2 = frame[2] + (frame[3] << 8);
     unsigned int run_time_ms = frame[4] + (frame[5] << 8);
 
-    DisableIntT1;	// since PID interrupt overwrites PWM values
+    DisableIntT1;   // since PID interrupt overwrites PWM values
 
     tiHSetDC(1, thrust1);
     tiHSetDC(2, thrust2);
