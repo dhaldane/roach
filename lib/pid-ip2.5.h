@@ -52,7 +52,7 @@ typedef struct
     int Kp, Ki, Kd;
 	int Kaw;  // anti-windup gain
 	//Leg control variables
-	int interpolate;  				// intermediate value between setpoints
+	long interpolate;  				// intermediate value between setpoints
 	unsigned long expire;		// end of current segment
 	int index;					// right index to moves
 	int leg_stride;
