@@ -46,10 +46,10 @@ def main():
             numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
             eraseFlashMem(numSamples)
 
-        # Pause and wait to start run, including leadin time
-        raw_input("Press enter to start run ...") 
         # Trigger telemetry save, which starts as soon as it is received
         if params.telemetry:
+        # Pause and wait to start run, including leadin time
+            raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
         #Start robot
         xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
