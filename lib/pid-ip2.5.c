@@ -359,7 +359,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
 
 // update desired velocity and position tracking setpoints for each leg
 void pidGetSetpoint(int j){
-    int index; long temp_v;
+    int index; 
     index = pidObjs[j].index;		
 	// update desired position between setpoints, scaled by 256
 	pidObjs[j].interpolate += (long)activePID[j]->vel[index];
