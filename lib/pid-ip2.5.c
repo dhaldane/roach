@@ -107,6 +107,7 @@ void initPIDVelProfile()
         nextPID[j] = NULL;
 
 		for(i = 0; i < NUM_VELS; i++){
+            //This is broken
 		  	// interpolate values between setpoints, <<4 for resolution
 			pidVel[j].interval[i] = 128;  // 128 ms intervals
 		    pidVel[j].delta[i] =  0x1000; // 1/16 rev
@@ -126,8 +127,9 @@ pidVelLUT* otherBuff(pidVelLUT* array, pidVelLUT* ptr){
         return ptr + NUM_PIDS;
     }
 }
+
 // called from cmd.c
-void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel){
+void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel, int onceFlag){
     pidVelLUT* tempPID;
     int i;
     nextPID[pid_num] = NULL;
@@ -138,7 +140,10 @@ void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel){
         tempPID->delta[i]= delta[i];
         tempPID->vel[i]= vel[i];
     }
-    nextPID[pid_num] = tempPID;
+    tempPID->onceFlag = onceFlag;
+    if (activePID[pid_num]->onceFlag == 0){
+        nextPID[pid_num] = tempPID;
+    }
 }
 
 
@@ -375,11 +380,20 @@ void pidGetSetpoint(int j){
              pidObjs[j].leg_stride++;  // one full leg revolution
     /**** maybe need to handle round off in position set point ***/
              if(nextPID[j] != NULL){    //Swap pointer if not null
+                if(nextPID[j]->onceFlag == 1){
+                    pidVelLUT* tempPID;
+                    CRITICAL_SECTION_START;
+                    tempPID = activePID[j];
+                    activePID[j] = nextPID[j];
+                    nextPID[j] = tempPID;
+                    CRITICAL_SECTION_END;
+                } else {
                 CRITICAL_SECTION_START;
                 activePID[j] = nextPID[j];
                 nextPID[j] = NULL;
                 CRITICAL_SECTION_END;
-             }
+                }
+            }
         }  
 		pidObjs[j].expire += activePID[j]->interval[pidObjs[j].index];  // expire time for next interval
 	    //pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];	  //update to next velocity 

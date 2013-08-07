@@ -195,7 +195,7 @@ class TestSuite():
 
     def defProfile(self, vel):
         header = chr(kStatusUnused) + chr(SetVelProfile)
-        data_out = header + ''.join(pack("10h",*vel))
+        data_out = header + ''.join(pack("12h",*vel))
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
             time.sleep(0.2)

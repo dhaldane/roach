@@ -65,13 +65,14 @@ typedef struct
 	int interval[NUM_VELS];	// number of ticks between intervals
 	int delta[NUM_VELS];   // increments for right setpoint
 	int vel[NUM_VELS];     // velocity increments to setpoint, >>8
+	int onceFlag;
 } pidVelLUT;
 
 //Functions
 void UpdatePID(pidPos *pid);
 void pidSetup();
 void initPIDVelProfile();
-void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel);
+void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel, int onceFlag);
 void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff);
 //void SetupTimer1(void);
 void pidStartTimedTrial(unsigned int run_time);

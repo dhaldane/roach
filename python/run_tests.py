@@ -94,15 +94,15 @@ if __name__ == '__main__':
             elif keypress == 'r':
                 print "Turn test. Enter leg frequency:",
                 p = 1000.0/int(raw_input())
-                ts.defProfile([100,0,0,0,0,100,0,0,0,0])
+                ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])
                 ts.PIDStart(duration)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+                print 'Send Start'
+                raw_input()
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0]
                 ts.defProfile(vel)
-                time.sleep(4.9*p/1000)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
-                ts.defProfile(vel)
-                time.sleep(0.9*p/1000)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+                print 'Send Maneuver'
+                raw_input()
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 1, int(p), 0x1000>>2, 0x1000>>2, 0x8000>>2, 0x6000>>2, 1]
                 ts.defProfile(vel)
                 time.sleep(5*p/1000)
                 ts.PIDSTAHP()

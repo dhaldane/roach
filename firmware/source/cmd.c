@@ -206,9 +206,9 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
 }
 
 unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period;
+    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period, onceFlag;
     int idx = 0, i = 0;
-    // Packet structure [Period, delta[NUM_VELS], Period, delta[NUM_VELS]]
+    // Packet structure [Period, delta[NUM_VELS], FLAG, Period, delta[NUM_VELS], FLAG]
     period = frame[idx] + (frame[idx + 1]<<8);
     idx+=2;
     for(i = 0; i < NUM_VELS; i ++) {
@@ -223,7 +223,10 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
         vel[i] = delta[i]/interval[i];
         idx+=2;
     }
-    setPIDVelProfile(0, interval, delta, vel);
+    onceFlag = frame[idx] + (frame[idx + 1]<<8);
+    idx+=2;    
+
+    setPIDVelProfile(0, interval, delta, vel, onceFlag);
     
     period = frame[idx] + (frame[idx + 1]<<8);
     idx+=2;
@@ -239,8 +242,9 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
         vel[i] = delta[i]/interval[i];
         idx+=2;
         }
+    onceFlag = frame[idx] + (frame[idx + 1]<<8);
 
-    setPIDVelProfile(1, interval, delta, vel);
+    setPIDVelProfile(1, interval, delta, vel, onceFlag);
 
     //Send confirmation packet
     // TODO : Send confirmation packet with packet index
