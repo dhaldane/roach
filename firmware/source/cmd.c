@@ -134,6 +134,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
     for (i = 0; i < NUM_PIDS; i++){
         pidObjs[i].timeFlag = 1;
         pidSetInput(i, 0);
+        pidObjs[i].p_input = pidObjs[i].p_state;
         pidOn(i);
     }
 
@@ -255,8 +256,10 @@ unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsign
     pidObjs[0].timeFlag = 0;
     pidObjs[1].timeFlag = 0;
     pidSetInput(0, 0);
+    pidObjs[0].p_input = pidObjs[0].p_state;
     pidOn(0);
     pidSetInput(1, 0);
+    pidObjs[1].p_input = pidObjs[1].p_state;
     pidOn(1);
     return 1;
 }

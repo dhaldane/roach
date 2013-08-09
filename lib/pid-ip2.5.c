@@ -114,7 +114,6 @@ void initPIDVelProfile()
 			pidVel[j].vel[i] = (pidVel[j].delta[i] << 8) / pidVel[j].interval[i];
 		 }
 		pidObjs[j].p_input = 0; // initialize first set point 
-//		pidObjs[j].v_input = 0; // initialize first velocity
 		pidObjs[j].v_input = (int)(((long) pidVel[j].vel[0] * K_EMF) >>8);	//initialize first velocity, scaled
 	}
 }
@@ -365,10 +364,10 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
 
 // update desired velocity and position tracking setpoints for each leg
 void pidGetSetpoint(int j){
-    int index; long temp_v;
+    int index; 
     index = pidObjs[j].index;		
 	// update desired position between setpoints, scaled by 256
-	pidObjs[j].interpolate += activePID[j]->vel[index];
+	pidObjs[j].interpolate += (long)activePID[j]->vel[index];
 
 	if (t1_ticks >= pidObjs[j].expire){ // time to reach previous setpoint has passed
 		pidObjs[j].interpolate = 0;	
@@ -396,9 +395,7 @@ void pidGetSetpoint(int j){
             }
         }  
 		pidObjs[j].expire += activePID[j]->interval[pidObjs[j].index];  // expire time for next interval
-	    //pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];	  //update to next velocity 
-		temp_v = ((long)activePID[j]->vel[pidObjs[j].index] * K_EMF)>>8;  // scale velocity to A/D units
-        pidObjs[j].v_input = activePID[j]->vel[pidObjs[j].index];    //update to next velocity 
+        pidObjs[j].v_input = (activePID[j]->vel[pidObjs[j].index]);    //update to next velocity 
 	}
 }   
 
@@ -450,9 +447,8 @@ void pidGetState()
 
 #if VEL_BEMF == 0    // use first difference on position for velocity estimate
 	for(i=0; i<NUM_PIDS; i++)
-	{	velocity = pidObjs[i].p_state - oldpos[i];  // 2**16 * revs per ms
-		velocity = velocity >> 6; // divide by 2**16, mult by 2**10 to get approx revs/sec
-	      if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
+	{	velocity = pidObjs[i].p_state - oldpos[i];  // Encoder ticks per ms
+	    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
 		if(velocity < -0x7fff) velocity = -0x7fff;	
 		pidObjs[i].v_state = (int) velocity;
 	}

@@ -33,15 +33,14 @@ int gdata[3];   //gyrodata
 int xldata[3];  // accelerometer data 
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
-extern pidVelLUT  pidVel[NUM_PIDS];
 telemStruct_t telemPIDdata;
 
 void telemGetPID(){
 
     telemPIDdata.posL = pidObjs[0].p_state;
     telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input  + pidObjs[0].interpolate;
-    telemPIDdata.composR = pidObjs[1].p_input  + pidObjs[1].interpolate;
+    telemPIDdata.composL = pidObjs[0].p_input;
+    telemPIDdata.composR = pidObjs[1].p_input;
     telemPIDdata.dcL = pidObjs[0].output; // left
     telemPIDdata.dcR = pidObjs[1].output; // right
     telemPIDdata.bemfL = bemf[0];
