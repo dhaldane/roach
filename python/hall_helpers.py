@@ -27,6 +27,20 @@ class hallParams:
         self.telemetry = telemetry
         self.repeat = repeat
 
+class manueverParams:
+    leadIn      = []
+    leadOut     = []
+    strideFreq  = []
+    useFlag     = []
+    deltas      = []
+    def __init__(self, leadIn, leadOut, strideFreq, useFlag, deltas):
+        self.leadIn =  leadIn     
+        self.leadOut =  leadOut    
+        self.strideFreq =  strideFreq 
+        self.useFlag =  useFlag    
+        self.deltas =  deltas     
+        
+
 
 def xb_safe_exit():
     print "Halting xb"
@@ -52,8 +66,8 @@ def menu():
     print "e:right+   |d:right-   |c:right off  |<sp>: all off"
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
-def settingsMenu(params):
-    print "t:duration   |m:telemetry   |p = motion profile"
+def settingsMenu(params, manParams):
+    print "t:duration   |m:telemetry   |p = motion profile  |b = Motion queue   |n = deltas"
     print "Proceed: Space Bar"
     while True:
         print '>',
@@ -66,7 +80,28 @@ def settingsMenu(params):
         elif keypress == 'm':
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
+        elif keypress == 'b':
+            print 'Manuever Enabled'
+            manParams.useFlag = True
+            print 'Enter movement string (#Lead in Strides, Lead Out, Stride Frequncy (Hz):',
+            x = raw_input()
+            if len(x):
+                temp = map(float,x.split(','))
+            manParams.leadIn = temp[0]
+            manParams.leadOut = temp[1]
+            manParams.strideFreq = temp[2]
+        elif keypress == 'n':
+            print 'Manuever Enabled'
+            manParams.useFlag = True
+            print 'Enter 6 fractional deltas (0-1) L-R : ',
+            x = raw_input()
+            if len(x):
+                manParams.deltas = map(float,x.split(','))
+            print 'Deltas: ', manParams.deltas
+
         elif keypress == 'p':
+            print 'Manuever Disabled'
+            manParams.useFlag = False
             print 'Desired Velocity, Turn Rate: ',
             x = raw_input()
             if len(x):
@@ -95,19 +130,37 @@ def repeatMenu(params):
             ser.close()
             sys.exit(0)
 
-def setVelProfile(vel, turn_rate):
-    print "Sending velocity profile, V, w", vel, turn_rate
-    rVel = 1043*vel + 80*turn_rate
-    lVel = 1043*vel - 80*turn_rate
-    # lVelAr = [int(lVel),int(lVel),int(lVel),int(lVel)]
-    # rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
-    # temp = lVelAr + rVelAr
-    print "Turn test. Enter leg frequency:",
-    p = 1000.0/int(raw_input())
-    delta = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
-    print delta
-    xb_send(0,command.SET_VEL_PROFILE, pack('10h',*delta))
+def setVelProfile(params, manParams, manFlag):
+    p = 1000.0/manParams.strideFreq
+    if manFlag == True:
+        delta = manParams.deltas
+        deltaConv = 0x4000
+        lastLeftDelta = 1-sum(manParams.deltas[:3])
+        lastRightDelta = 1-sum(manParams.deltas[3:])
+        temp = [int(p), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
+    # Alternating Tripod
+    else: 
+        temp = [int(p), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
+                int(p), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+    print temp
+    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
+def runManuver(params, manParams):
+    p = 1.0/manParams.strideFreq
+    temp = [100,0,0,0,0,0,100,0,0,0,0,0]
+    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
+    time.sleep(0.01)
+    xb_send(0, command.START_TIMED_RUN, pack('h',int(1000*p*(manParams.leadOut+manParams.leadIn+1))))
+    time.sleep(0.01)
+    setVelProfile(params,manParams,False)
+    time.sleep(p*(manParams.leadIn - 0.5))
+    setVelProfile(params,manParams,True)
+    time.sleep(manParams.leadOut * p)
+
+
+# rVel = 1043*vel + 80*turn_rate
+# lVel = 1043*vel - 80*turn_rate
     
 #get velocity profile
 def getVelProfile(params):

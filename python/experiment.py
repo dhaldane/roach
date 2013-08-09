@@ -24,15 +24,22 @@ def main():
     turn_rate = 0
     telemetry = True
     repeat = False
-    setVelProfile(0,0)
 
     params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
     setMotorGains(motorgains)
 
+    leadIn = 10
+    leadOut = 10
+    strideFreq = 5
+    useFlag = 0
+    deltas = [0.25, 0.1, 0.25, 0.25, 0.25, 0.25]
+
+    manParams = manueverParams(leadIn, leadOut, strideFreq, useFlag, deltas)
+
     while True:
 
         if not(params.repeat):
-            settingsMenu(params)   
+            settingsMenu(params, manParams)   
 
         if params.telemetry:
             # Construct filename
@@ -43,7 +50,11 @@ def main():
             root     = path + dt_str + '_' + name
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
-            numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
+            if manParams.useFlag == True:
+                duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
+                numSamples = int(ceil(1000 * duration))
+            else:
+                numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
             eraseFlashMem(numSamples)
 
         # Pause and wait to start run, including leadin time
@@ -52,10 +63,12 @@ def main():
         if params.telemetry:
             startTelemetrySave(numSamples)
         #Start robot
-        xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
-
-        time.sleep(params.duration / 1000.0)
-        
+        if manParams.useFlag == True:
+            print 'test'
+            runManuver(params, manParams)
+        else:
+            xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
+            time.sleep(params.duration / 1000.0)
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params)
