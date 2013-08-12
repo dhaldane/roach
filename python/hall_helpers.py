@@ -284,7 +284,7 @@ def getDstAddrString():
 def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
 
-def flashReadback(numSamples, params):
+def flashReadback(numSamples, params, manParams):
     delay = 0.0045
     # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
@@ -292,7 +292,7 @@ def flashReadback(numSamples, params):
     shared.pkts = 0  # reset packet count???
     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
     # While waiting, write parameters to start of file
-    writeFileHeader(shared.dataFileName, params)     
+    writeFileHeader(shared.dataFileName, params, manParams)     
     time.sleep(delay*numSamples + 1)
     # while shared.pkts != numSamples:
     #     print "Retry"
@@ -309,15 +309,16 @@ def flashReadback(numSamples, params):
     fileout.close()
     print "data saved to ",shared.dataFileName
         
-def writeFileHeader(dataFileName, params):
+def writeFileHeader(dataFileName, params, manParams):
     fileout = open(dataFileName,'w')
     #write out parameters in format which can be imported to Excel
     today = time.localtime()
     date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
-    fileout.write('"%  Velocity(m/s)         = ' +repr(params.vel) + '"\n')
-    fileout.write('"%  Angular velocity(rad/s)         = ' +repr(params.turn_rate) + '"\n')
+    fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
+    fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
+    fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
     fileout.write('"%  Experiment.py "\n')
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')
