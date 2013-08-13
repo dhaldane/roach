@@ -64,7 +64,7 @@ def main():
             startTelemetrySave(numSamples)
         #Start robot
         if manParams.useFlag == True:
-            runManuver(params, manParams)
+            runManeuver(params, manParams)
         else:
             xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
             time.sleep(params.duration / 1000.0)

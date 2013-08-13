@@ -146,7 +146,7 @@ def setVelProfile(params, manParams, manFlag):
     print temp
     xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
-def runManuver(params, manParams):
+def runManeuver(params, manParams):
     p = 1.0/manParams.strideFreq
     temp = [100,0,0,0,0,0,100,0,0,0,0,0]
     xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
