@@ -80,6 +80,7 @@ void pidSetInput(int pid_num, int input_val);
 void pidSetGains(int pid_num, int Kp, int Ki, int Kd, int Kaw, int ff);
 void pidGetState(); // update state vector from bemf and Hall angle
 void pidGetSetpoint(int j);
+void checkSwapBuff(int j);
 void pidSetControl();
 void EmergencyStop(void);
 unsigned char* pidGetTelemetry(void);
