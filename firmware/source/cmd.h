@@ -18,7 +18,8 @@
 #define CMD_START_TELEMETRY			0x8F
 #define CMD_ZERO_POS 				0x90
 #define CMD_START_TIMED_RUN			0x91 
-#define CMD_PID_STOP_MOTORS			0x92	     
+#define CMD_PID_STOP_MOTORS         0x92         
+#define CMD_SET_PHASE   			0x93	     
 // Redefine
 
 void cmdSetup(void);

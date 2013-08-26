@@ -53,15 +53,17 @@ getch = _Getch()
 class hallParams:
     motorgains = []
     duration = []
-    vel = []
-    turn_rate = []
+    rightFreq = []
+    leftFreq = []
+    phase = []
     telemetry = []
     repeat = []
-    def __init__(self, motorgains, duration, vel, turn_rate, telemetry, repeat):
+    def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat):
         self.motorgains = motorgains
         self.duration = duration
-        self.vel = vel
-        self.turn_rate = turn_rate
+        self.rightFreq = rightFreq
+        self.leftFreq = leftFreq
+        self.phase = phase
         self.telemetry = telemetry
         self.repeat = repeat
 
@@ -69,12 +71,14 @@ class manueverParams:
     leadIn      = []
     leadOut     = []
     strideFreq  = []
+    phase       = []
     useFlag     = []
     deltas      = []
-    def __init__(self, leadIn, leadOut, strideFreq, useFlag, deltas):
+    def __init__(self, leadIn, leadOut, strideFreq, phase, useFlag, deltas):
         self.leadIn =  leadIn     
         self.leadOut =  leadOut    
         self.strideFreq =  strideFreq 
+        self.phase =  phase 
         self.useFlag =  useFlag    
         self.deltas =  deltas     
         
@@ -136,17 +140,17 @@ def settingsMenu(params, manParams):
             if len(x):
                 manParams.deltas = map(float,x.split(','))
             print 'Deltas: ', manParams.deltas
-
         elif keypress == 'p':
             print 'Manuever Disabled'
             manParams.useFlag = False
-            print 'Desired Velocity, Turn Rate: ',
+            print 'Right Leg Frequency, Left Leg Frequency, Phase (degrees): ',
             x = raw_input()
             if len(x):
                 temp = map(float,x.split(','))
-            params.vel = temp[0]
-            params.turn_rate = temp[1]
-            setVelProfile(params.vel, params.turn_rate)
+            params.rightFreq = temp[0]
+            params.leftFreq = temp[1]
+            params.phase = temp[2] * 65536.0/360
+            setVelProfile(params, manParams, 0)
 
 def repeatMenu(params):
     print "SPACE: Repeat with same settings  |q:quit"
@@ -179,8 +183,8 @@ def setVelProfile(params, manParams, manFlag):
                 int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
     # Alternating Tripod
     else: 
-        temp = [int(p), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
-                int(p), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+        temp = [int(1000.0/params.rightFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
+                int(1000.0/params.leftFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0]
     print temp
     xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
@@ -354,9 +358,16 @@ def writeFileHeader(dataFileName, params, manParams):
     date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
-    fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
-    fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
-    fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
+
+    if manParams.useFlag == True:
+        fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
+        fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
+        fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
+    else:    
+        fileout.write('"%  Right Stride Frequency         = ' +repr(params.rightFreq) + '"\n')
+        fileout.write('"%  Left Stride Frequency         = ' +repr(params.leftFreq) + '"\n')
+        fileout.write('"%  Phase (Fractional)         = ' +repr(params.phase) + '"\n')
+
     fileout.write('"%  Experiment.py "\n')
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')

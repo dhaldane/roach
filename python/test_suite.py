@@ -185,9 +185,9 @@ class TestSuite():
         
         print "Turn test. Enter leg frequency:",
         p = 1000.0/int(raw_input())
-        vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+        vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0]
         print vel
-        data_out = header + ''.join(pack("10h",*vel))
+        data_out = header + ''.join(pack("12h",*vel))
 
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)

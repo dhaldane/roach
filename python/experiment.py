@@ -20,21 +20,23 @@ def main():
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [1800,20,100,0,0, 1800,20,100,0,0]
     duration = 500
-    vel = 0
-    turn_rate = 0
+    rightFreq = 0
+    leftFreq = 0
+    phase = 0
     telemetry = True
     repeat = False
 
-    params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
+    params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
     setMotorGains(motorgains)
 
     leadIn = 10
     leadOut = 10
     strideFreq = 5
+    phase = 0x8000      # Alternating tripod
     useFlag = 0
-    deltas = [0.25, 0.1, 0.25, 0.25, 0.25, 0.25]
+    deltas = [.25, 0.25, 0.25, 0.125, 0.125, 0.5]
 
-    manParams = manueverParams(leadIn, leadOut, strideFreq, useFlag, deltas)
+    manParams = manueverParams(leadIn, leadOut, strideFreq, phase, useFlag, deltas)
 
     while True:
 
@@ -66,6 +68,8 @@ def main():
         if manParams.useFlag == True:
             runManeuver(params, manParams)
         else:
+            xb_send(0, command.SET_PHASE, pack('l', params.phase))
+            time.sleep(0.01)
             xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
             time.sleep(params.duration / 1000.0)
 
