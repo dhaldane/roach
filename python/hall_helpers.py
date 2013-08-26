@@ -1,6 +1,6 @@
 import glob
 import time
-import msvcrt, sys
+import sys
 from lib import command
 from callbackFunc import xbee_received
 import datetime
@@ -11,6 +11,44 @@ from xbee import XBee
 from math import ceil,floor
 import numpy as np
 
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
 
 class hallParams:
     motorgains = []
@@ -71,7 +109,7 @@ def settingsMenu(params, manParams):
     print "Proceed: Space Bar"
     while True:
         print '>',
-        keypress = msvcrt.getch()
+        keypress = getch()
         if keypress == ' ':
             break
         elif keypress == 't':
@@ -115,7 +153,7 @@ def repeatMenu(params):
     print "s: Settings                       |z:zero motors"
     while True:
         print '>',
-        keypress = msvcrt.getch()
+        keypress = getch()
         if keypress == ' ':
             params.repeat = True
             break
