@@ -38,14 +38,14 @@
 #  Fernando L. Garcia Bermudez      2012-8-20    Initial release
 #
 
-import msvcrt, sys, traceback
+import sys, traceback
 import test_suite
 import time
 
 
 #RADIO_DEV_NAME  = '/dev/tty.usbserial-*' or 'COMx'
 #RADIO_DEV_NAME = 'COM1'
-RADIO_DEV_NAME = 'COM3'
+RADIO_DEV_NAME = '/dev/ttyUSB0'
 BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
@@ -63,26 +63,25 @@ if __name__ == '__main__':
         #Initialization
         ts.SetGains(motorgains)
 
-
-        while msvcrt.kbhit():
-            ch = msvcrt.getch()
-
         while True:
-            keypress = msvcrt.getch()
+            keypress = getch()
             print '>',
 
             if keypress == 'p':
                 ts.PIDStart(duration)
-
             elif keypress == ' ':
                 ts.PIDSTAHP()
-
+            elif keypress == 'v':
+                print "Hold Gait"
+                ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])
+            elif keypress == 'b':
+                print "Enter Phase (deg):",
+                phase = int(raw_input()) * 65536.0/360
+                ts.setPhase(phase)
             elif keypress == 'm':
                 ts.test_motorop()
-
             elif keypress == 'z':
                 ts.zeroPos()
-
             elif keypress == 'w':
                 ts.test_mpu()
             elif keypress == 'd':
@@ -109,7 +108,6 @@ if __name__ == '__main__':
                 print "Done"
             elif keypress == 'g':
                 ts.SetGains()
-
             elif keypress == 'i':
                 ts.SetProfile()
             elif keypress == 'a':

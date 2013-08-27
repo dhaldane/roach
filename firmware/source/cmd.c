@@ -291,11 +291,10 @@ unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned cha
     {
         offset += (frame[i] << 8*i );
     }
-    error = (pidObjs[0].p_state & 0x0000FFFF); 
-    pidObjs[0].p_input = pidObjs[0].p_state - error;
+    error = offset - ((pidObjs[0].p_state & 0x0000FFFF) - (pidObjs[1].p_state & 0x0000FFFF)); 
     
-    error = (pidObjs[1].p_state & 0x0000FFFF) - offset;
-    pidObjs[1].p_input = pidObjs[1].p_state - error;
+    pidObjs[0].p_input = pidObjs[0].p_state - error/2;
+    pidObjs[1].p_input = pidObjs[1].p_state + error/2;
     return 1;
 }
 

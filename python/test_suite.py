@@ -40,12 +40,52 @@ SetVelProfile   =   0x8D
 WhoAmI          =   0x8E                    
 zeroPos         =   0x90                    
 PIDStopMotors   =   0x92
+setPhaseCmd =   0x93
 
 #kImWidth = 160
 #kImHeight = 100
 
 ON = 1
 OFF = 0
+
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
 
 
 class TestSuite():
@@ -183,7 +223,7 @@ class TestSuite():
     def SetProfile(self):
         header = chr(kStatusUnused) + chr(SetVelProfile)
         
-        print "Turn test. Enter leg frequency:",
+        print "Enter leg frequency:",
         p = 1000.0/int(raw_input())
         vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0]
         print vel
@@ -199,6 +239,13 @@ class TestSuite():
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
             time.sleep(0.2)
+
+    def setPhase(self,offset):
+        header = chr(kStatusUnused) + chr(setPhase)
+        data_out = header + ''.join(pack("l",*offset))
+        if(self.check_conn()):
+            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+            time.sleep(0.2)   
 
             
     def PIDStart(self, duration):

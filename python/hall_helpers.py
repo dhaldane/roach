@@ -327,13 +327,14 @@ def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
 
 def flashReadback(numSamples, params, manParams):
-    delay = 0.0045
+    delay = 0.006
     # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
     shared.imudata = [ [] ] * numSamples  # reset imudata structure
     shared.pkts = 0  # reset packet count???
     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
     # While waiting, write parameters to start of file
+    print shared.dataFileName
     writeFileHeader(shared.dataFileName, params, manParams)     
     time.sleep(delay*numSamples + 1)
     # while shared.pkts != numSamples:

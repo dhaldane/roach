@@ -4,7 +4,7 @@ authors: stanbaek, apullin
 
 """
 from lib import command
-import time,sys
+import time,sys,os
 import serial
 import shared
 
@@ -45,13 +45,14 @@ def main():
 
         if params.telemetry:
             # Construct filename
-            path     = 'Data/'
+            path     = '/home/duncan/Data/'
             name     = 'trial'
             datetime = time.localtime()
             dt_str   = time.strftime('%Y.%m.%d_%H.%M.%S', datetime)
             root     = path + dt_str + '_' + name
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
+            print os.curdir
             if manParams.useFlag == True:
                 duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
                 numSamples = int(ceil(1000 * duration))
