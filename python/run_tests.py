@@ -42,10 +42,47 @@ import sys, traceback
 import test_suite
 import time
 
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
 
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
 #RADIO_DEV_NAME  = '/dev/tty.usbserial-*' or 'COMx'
-#RADIO_DEV_NAME = 'COM1'
-RADIO_DEV_NAME = '/dev/ttyUSB0'
+RADIO_DEV_NAME = 'COM3'
+# RADIO_DEV_NAME = '/dev/ttyUSB0'
 BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
@@ -76,8 +113,17 @@ if __name__ == '__main__':
                 ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])
             elif keypress == 'b':
                 print "Enter Phase (deg):",
-                phase = int(raw_input()) * 65536.0/360
+                phase = long(int(raw_input()) * 65536.0/360)
                 ts.setPhase(phase)
+            elif keypress == 'n':
+                print "Turning gait: enter frequency, direction(-1,1): ",
+                x = raw_input()
+                if len(x):
+                    temp = map(int,x.split(','))
+                p = 1000.0/temp[0]
+                r = temp[1]
+                vel = [int(p), 0x1000*(r), 0x1000*(r), 0x1000*(r), 0x1000*(r), 0, int(p), 0x1000*(-r), 0x1000*(-r), 0x1000*(-r), 0x1000*(-r), 0]
+                ts.defProfile(vel)
             elif keypress == 'm':
                 ts.test_motorop()
             elif keypress == 'z':
