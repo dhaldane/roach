@@ -3,8 +3,8 @@ xb = []
 ser = []
 
 #Base station
-BS_COMPORT = 'COM3'
-BS_BAUDRATE = 230400
+BS_COMPORT = 'COM4'
+BS_BAUDRATE = 111111
 #XBee
 # BS_COMPORT = 'COM2'
 # BS_BAUDRATE = 57600
