@@ -9,7 +9,7 @@ import pygame
 from callbackFunc import xbee_received
 import shared
 
-DEST_ADDR = '\x20\x52'
+DEST_ADDR = '\x21\x02'
 imudata_file_name = 'imudata.txt'
 statedata_file_name = 'statedata.txt'
 dutycycle_file_name = 'dutycycle.txt'
@@ -21,7 +21,7 @@ dutycycles = []
 motordata = []
 gainsNotSet = True;
 
-MAXTHROT = 200
+MAXPER = 1000
 
 
 ser = serial.Serial(shared.BS_COMPORT, 230400,timeout=3, rtscts=1)
@@ -36,8 +36,7 @@ def resetRobot():
 
 
 def main():
-    global MAXTHROT
-    dataFileName = 'imudata.txt'
+    global MAXPER
 
     if ser.isOpen():
         print "Serial open."
@@ -56,44 +55,44 @@ def main():
         ser.close()
         sys.exit(-1)
 
-    motorgains = [200,2,0,2,0,    200,2,0,2,0]
+    motorgains = motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
     while not(shared.motor_gains_set):
         print "Setting motor gains..."
         xb_send(0, command.SET_PID_GAINS, pack('10h',*motorgains))
         time.sleep(1)
-    
-    throttle = [0,0]
-    tinc = 25;
+        xb_send(0, command.PID_START_MOTORS, "Start motor")
 
     try:    
         while True:
 
             value = []
             pygame.event.pump()
-            left_throt = -j.get_axis(1)
-            right_throt = -j.get_axis(2)
-            if left_throt < 0.01:
-                left_throt = 0
-            if right_throt < 0.01:
-                right_throt = 0
-            left_throt = MAXTHROT * left_throt
-            right_throt = MAXTHROT * right_throt
-            #print "L: ",left_throt,"  |   R: ",right_throt
+            left_per = -j.get_axis(1)
+            right_per = -j.get_axis(3)
+            if left_per < 0.01:
+                left_per = 0
+            if right_per < 0.01:
+                right_per = 0
+            left_per  = MAXPER -950*left_per
+            right_per = MAXPER -950*right_per
+            print "L: ",left_per,"  |   R: ",right_per
             sys.stdout.write(" "*60 + "\r")
             sys.stdout.flush()
-            outstring = "L: {0:03.1f}  |   R: {1:03.1f} \r".format(left_throt,right_throt)
+            outstring = "L: {0:03.1f}  |   R: {1:03.1f} \r".format(left_per,right_per)
             sys.stdout.write(outstring)
             sys.stdout.flush()
-            #throttle = [0 if t<0 else t for t in throttle]
-            thrust = [left_throt, 0, right_throt, 0, 0]
-            xb_send(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
-            #xb_send(0,command.SET_THRUST_OPEN_LOOP,pack('2h',*throttle))
+            # pertle = [0 if t<0 else t for t in pertle]
+            temp = [int(right_per), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
+                    int(left_per), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+            xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
             time.sleep(0.25)
 
     except:
         print
         print "closing"
+        xb_send(0, command.PID_STOP_MOTORS, "Stop motor")
+
         try:
             xb.halt()
             ser.close()

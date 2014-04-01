@@ -18,7 +18,7 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,20,100,0,0, 1800,20,100,0,0]
+    motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
     duration = 500
     rightFreq = 0
     leftFreq = 0
@@ -45,7 +45,8 @@ def main():
 
         if params.telemetry:
             # Construct filename
-            path     = '/home/duncan/Data/'
+            # path     = '/home/duncan/Data/'
+            path     = 'Data/'
             name     = 'trial'
             datetime = time.localtime()
             dt_str   = time.strftime('%Y.%m.%d_%H.%M.%S', datetime)
