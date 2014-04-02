@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import math
 from lib import command 
 from struct import *
 import time
@@ -67,14 +68,10 @@ def main():
 
             value = []
             pygame.event.pump()
-            left_per = -j.get_axis(1)
-            right_per = -j.get_axis(3)
-            if left_per < 0.01:
-                left_per = 0
-            if right_per < 0.01:
-                right_per = 0
-            left_per  = MAXPER -950*left_per
-            right_per = MAXPER -950*right_per
+            left_joy = -j.get_axis(1)
+            right_joy = -j.get_axis(3)
+            left_per  = MAXPER -800*math.fabs(left_joy)
+            right_per = MAXPER -800*math.fabs(right_joy)
             print "L: ",left_per,"  |   R: ",right_per
             sys.stdout.write(" "*60 + "\r")
             sys.stdout.flush()
@@ -82,11 +79,19 @@ def main():
             sys.stdout.write(outstring)
             sys.stdout.flush()
             # pertle = [0 if t<0 else t for t in pertle]
-            temp = [int(right_per), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
-                    int(left_per), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+            delta = 0x1000
+            r_delta = math.copysign(delta,right_joy)
+            if right_per > 800:
+                r_delta = 0
+            l_delta = math.copysign(delta,left_joy)
+            if left_per > 800:
+                l_delta = 0
+
+            temp = [int(right_per), int(r_delta), int(r_delta), int(r_delta), int(r_delta), 0, \
+                    int(left_per), int(l_delta), int(l_delta), int(l_delta), int(l_delta), 0]
             xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
-            time.sleep(0.25)
+            time.sleep(0.1)
 
     except:
         print
