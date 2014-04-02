@@ -67,5 +67,7 @@ WHO_AM_I                =   0x8E
 START_TELEMETRY         =   0x8F
 ZERO_POS                =   0x90
 START_TIMED_RUN         =   0x91
+PID_STOP_MOTORS         =   0x92
+SET_PHASE               =   0x93
 
 # CMD values of 0xF0(240) - 0xFF(255) are reserved for future use

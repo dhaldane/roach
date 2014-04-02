@@ -1,6 +1,6 @@
 import glob
 import time
-import msvcrt, sys
+import sys
 from lib import command
 from callbackFunc import xbee_received
 import datetime
@@ -11,21 +11,77 @@ from xbee import XBee
 from math import ceil,floor
 import numpy as np
 
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
 
 class hallParams:
     motorgains = []
     duration = []
-    vel = []
-    turn_rate = []
+    rightFreq = []
+    leftFreq = []
+    phase = []
     telemetry = []
     repeat = []
-    def __init__(self, motorgains, duration, vel, turn_rate, telemetry, repeat):
+    def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat):
         self.motorgains = motorgains
         self.duration = duration
-        self.vel = vel
-        self.turn_rate = turn_rate
+        self.rightFreq = rightFreq
+        self.leftFreq = leftFreq
+        self.phase = phase
         self.telemetry = telemetry
         self.repeat = repeat
+
+class manueverParams:
+    leadIn      = []
+    leadOut     = []
+    strideFreq  = []
+    phase       = []
+    useFlag     = []
+    deltas      = []
+    def __init__(self, leadIn, leadOut, strideFreq, phase, useFlag, deltas):
+        self.leadIn =  leadIn     
+        self.leadOut =  leadOut    
+        self.strideFreq =  strideFreq 
+        self.phase =  phase 
+        self.useFlag =  useFlag    
+        self.deltas =  deltas     
+        
 
 
 def xb_safe_exit():
@@ -52,12 +108,12 @@ def menu():
     print "e:right+   |d:right-   |c:right off  |<sp>: all off"
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
-def settingsMenu(params):
-    print "t:duration   |m:telemetry   |p = motion profile"
+def settingsMenu(params, manParams):
+    print "t:duration   |m:telemetry   |p = motion profile  |b = Motion queue   |n = deltas"
     print "Proceed: Space Bar"
     while True:
         print '>',
-        keypress = msvcrt.getch()
+        keypress = getch()
         if keypress == ' ':
             break
         elif keypress == 't':
@@ -66,21 +122,42 @@ def settingsMenu(params):
         elif keypress == 'm':
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
-        elif keypress == 'p':
-            print 'Desired Velocity, Turn Rate: ',
+        elif keypress == 'b':
+            print 'Manuever Enabled'
+            manParams.useFlag = True
+            print 'Enter movement string (#Lead in Strides, Lead Out, Stride Frequncy (Hz):',
             x = raw_input()
             if len(x):
                 temp = map(float,x.split(','))
-            params.vel = temp[0]
-            params.turn_rate = temp[1]
-            setVelProfile(params.vel, params.turn_rate)
+            manParams.leadIn = temp[0]
+            manParams.leadOut = temp[1]
+            manParams.strideFreq = temp[2]
+        elif keypress == 'n':
+            print 'Manuever Enabled'
+            manParams.useFlag = True
+            print 'Enter 6 fractional deltas (0-1) L-R : ',
+            x = raw_input()
+            if len(x):
+                manParams.deltas = map(float,x.split(','))
+            print 'Deltas: ', manParams.deltas
+        elif keypress == 'p':
+            print 'Manuever Disabled'
+            manParams.useFlag = False
+            print 'Right Leg Frequency, Left Leg Frequency, Phase (degrees): ',
+            x = raw_input()
+            if len(x):
+                temp = map(float,x.split(','))
+            params.rightFreq = temp[0]
+            params.leftFreq = temp[1]
+            params.phase = temp[2] * 65536.0/360
+            setVelProfile(params, manParams, 0)
 
 def repeatMenu(params):
     print "SPACE: Repeat with same settings  |q:quit"
     print "s: Settings                       |z:zero motors"
     while True:
         print '>',
-        keypress = msvcrt.getch()
+        keypress = getch()
         if keypress == ' ':
             params.repeat = True
             break
@@ -95,19 +172,37 @@ def repeatMenu(params):
             ser.close()
             sys.exit(0)
 
-def setVelProfile(vel, turn_rate):
-    print "Sending velocity profile, V, w", vel, turn_rate
-    rVel = 1043*vel + 80*turn_rate
-    lVel = 1043*vel - 80*turn_rate
-    # lVelAr = [int(lVel),int(lVel),int(lVel),int(lVel)]
-    # rVelAr = [int(rVel),int(rVel),int(rVel),int(rVel)]
-    # temp = lVelAr + rVelAr
-    print "Turn test. Enter leg frequency:",
-    p = 1000.0/int(raw_input())
-    delta = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
-    print delta
-    xb_send(0,command.SET_VEL_PROFILE, pack('10h',*delta))
+def setVelProfile(params, manParams, manFlag):
+    p = 1000.0/manParams.strideFreq
+    if manFlag == True:
+        delta = manParams.deltas
+        deltaConv = 0x4000
+        lastLeftDelta = 1-sum(manParams.deltas[:3])
+        lastRightDelta = 1-sum(manParams.deltas[3:])
+        temp = [int(p), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
+    # Alternating Tripod
+    else: 
+        temp = [int(1000.0/params.rightFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
+                int(1000.0/params.leftFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+    print temp
+    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
+def runManeuver(params, manParams):
+    p = 1.0/manParams.strideFreq
+    temp = [100,0,0,0,0,0,100,0,0,0,0,0]
+    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
+    time.sleep(0.01)
+    xb_send(0, command.START_TIMED_RUN, pack('h',int(1000*p*(manParams.leadOut+manParams.leadIn+1))))
+    time.sleep(0.01)
+    setVelProfile(params,manParams,False)
+    time.sleep(p*(manParams.leadIn - 0.5))
+    setVelProfile(params,manParams,True)
+    time.sleep(manParams.leadOut * p)
+
+
+# rVel = 1043*vel + 80*turn_rate
+# lVel = 1043*vel - 80*turn_rate
     
 #get velocity profile
 def getVelProfile(params):
@@ -231,15 +326,16 @@ def getDstAddrString():
 def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
 
-def flashReadback(numSamples, params):
-    delay = 0.0045
+def flashReadback(numSamples, params, manParams):
+    delay = 0.006
     # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
     shared.imudata = [ [] ] * numSamples  # reset imudata structure
     shared.pkts = 0  # reset packet count???
     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
     # While waiting, write parameters to start of file
-    writeFileHeader(shared.dataFileName, params)     
+    print shared.dataFileName
+    writeFileHeader(shared.dataFileName, params, manParams)     
     time.sleep(delay*numSamples + 1)
     # while shared.pkts != numSamples:
     #     print "Retry"
@@ -256,15 +352,23 @@ def flashReadback(numSamples, params):
     fileout.close()
     print "data saved to ",shared.dataFileName
         
-def writeFileHeader(dataFileName, params):
+def writeFileHeader(dataFileName, params, manParams):
     fileout = open(dataFileName,'w')
     #write out parameters in format which can be imported to Excel
     today = time.localtime()
     date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
-    fileout.write('"%  Velocity(m/s)         = ' +repr(params.vel) + '"\n')
-    fileout.write('"%  Angular velocity(rad/s)         = ' +repr(params.turn_rate) + '"\n')
+
+    if manParams.useFlag == True:
+        fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
+        fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
+        fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
+    else:    
+        fileout.write('"%  Right Stride Frequency         = ' +repr(params.rightFreq) + '"\n')
+        fileout.write('"%  Left Stride Frequency         = ' +repr(params.leftFreq) + '"\n')
+        fileout.write('"%  Phase (Fractional)         = ' +repr(params.phase) + '"\n')
+
     fileout.write('"%  Experiment.py "\n')
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')

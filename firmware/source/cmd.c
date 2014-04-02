@@ -46,6 +46,7 @@ static unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status,
 static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 
 //Experiment/Flash Commands
 static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
@@ -75,6 +76,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_VEL_PROFILE] = &cmdSetVelProfile;
     cmd_func[CMD_WHO_AM_I] = &cmdWhoAmI;
     cmd_func[CMD_ZERO_POS] = &cmdZeroPos;   
+    cmd_func[CMD_SET_PHASE] = &cmdSetPhase;   
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
 
@@ -96,6 +98,7 @@ void cmdPushFunc(MacPacket rx_packet) {
         }
     }
 }
+
 
 // send robot info when queried
 unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
@@ -127,14 +130,13 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 }
 // ==== Flash/Experiment Commands ==============================================================================
 // =============================================================================================================
-
 unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
     unsigned int run_time = frame[0] + (frame[1] << 8);
     int i;
     for (i = 0; i < NUM_PIDS; i++){
         pidObjs[i].timeFlag = 1;
         pidSetInput(i, 0);
-        pidObjs[i].p_input = pidObjs[i].p_state;
+        checkSwapBuff(i);
         pidOn(i);
     }
 
@@ -142,6 +144,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
 
     return 1;
 }
+
 unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
     if (numSamples != 0) {
@@ -207,9 +210,9 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
 }
 
 unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period;
+    int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period, onceFlag;
     int idx = 0, i = 0;
-    // Packet structure [Period, delta[NUM_VELS], Period, delta[NUM_VELS]]
+    // Packet structure [Period, delta[NUM_VELS], FLAG, Period, delta[NUM_VELS], FLAG]
     period = frame[idx] + (frame[idx + 1]<<8);
     idx+=2;
     for(i = 0; i < NUM_VELS; i ++) {
@@ -224,7 +227,10 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
         vel[i] = delta[i]/interval[i];
         idx+=2;
     }
-    setPIDVelProfile(0, interval, delta, vel);
+    onceFlag = frame[idx] + (frame[idx + 1]<<8);
+    idx+=2;    
+
+    setPIDVelProfile(0, interval, delta, vel, onceFlag);
     
     period = frame[idx] + (frame[idx + 1]<<8);
     idx+=2;
@@ -240,8 +246,9 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
         vel[i] = delta[i]/interval[i];
         idx+=2;
         }
+    onceFlag = frame[idx] + (frame[idx + 1]<<8);
 
-    setPIDVelProfile(1, interval, delta, vel);
+    setPIDVelProfile(1, interval, delta, vel, onceFlag);
 
     //Send confirmation packet
     // TODO : Send confirmation packet with packet index
@@ -276,6 +283,21 @@ unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char
     pidZeroPos(0); pidZeroPos(1);
     return 1;
 }
+
+unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+    long offset = 0, error;
+    int i;
+    for (i = 0; i < 4; i++)
+    {
+        offset += (frame[i] << 8*i );
+    }
+    error = offset - ((pidObjs[0].p_state & 0x0000FFFF) - (pidObjs[1].p_state & 0x0000FFFF)); 
+    
+    pidObjs[0].p_input = pidObjs[0].p_state + error/2;
+    pidObjs[1].p_input = pidObjs[1].p_state - error/2;
+    return 1;
+}
+
 
 void cmdError() {
     int i;

@@ -92,31 +92,6 @@ void pidSetup()
 }
 
 
-
-// ----------   all the initializations  -------------------------
-// set expire time for first segment in pidSetInput - use start time from MoveClosedLoop
-// set points and velocities for one revolution of leg
-// called from pidSetup()
-void initPIDVelProfile()
-{ int i,j;
-	for(j = 0; j < NUM_PIDS; j++){
-	   	pidObjs[j].index = 0;  // point to first velocity
-		pidObjs[j].interpolate = 0; 
-		pidObjs[j].leg_stride = 0;  // set initial leg count
-  		activePID[j] = &(pidVel[j]);    //Initialize buffer pointers
-        nextPID[j] = NULL;
-
-		for(i = 0; i < NUM_VELS; i++){
-		  	// interpolate values between setpoints, <<4 for resolution
-			pidVel[j].interval[i] = 128;  // 128 ms intervals
-		    pidVel[j].delta[i] =  0x1000; // 1/16 rev
-			pidVel[j].vel[i] = (pidVel[j].delta[i] << 8) / pidVel[j].interval[i];
-		 }
-		pidObjs[j].p_input = 0; // initialize first set point 
-		pidObjs[j].v_input = (int)(((long) pidVel[j].vel[0] * K_EMF) >>8);	//initialize first velocity, scaled
-	}
-}
-
 //Returns pointer to non-active buffer
 pidVelLUT* otherBuff(pidVelLUT* array, pidVelLUT* ptr){
     if( ptr >= &(array[NUM_PIDS])){
@@ -125,11 +100,38 @@ pidVelLUT* otherBuff(pidVelLUT* array, pidVelLUT* ptr){
         return ptr + NUM_PIDS;
     }
 }
+
+// ----------   all the initializations  -------------------------
+// set expire time for first segment in pidSetInput - use start time from MoveClosedLoop
+// set points and velocities for one revolution of leg
+// called from pidSetup()
+void initPIDVelProfile(){
+    int i,j;
+    pidVelLUT* tempPID;
+    for(j = 0; j < NUM_PIDS; j++){
+        pidObjs[j].index = 0;  // point to first velocity
+        pidObjs[j].interpolate = 0; 
+        pidObjs[j].leg_stride = 0;  // set initial leg count
+        activePID[j] = &(pidVel[j]);    //Initialize buffer pointers
+        nextPID[j] = NULL;
+        tempPID = otherBuff(pidVel, activePID[j]);
+        for(i = 0; i < NUM_VELS; i++){
+            tempPID->interval[i]= 100;
+            tempPID->delta[i]= 0;
+            tempPID->vel[i]= 0;   
+        }
+        tempPID->onceFlag = 0;
+        nextPID[j] = tempPID;
+        pidObjs[j].p_input = 0; // initialize first set point 
+        pidObjs[j].v_input = (int)(((long) pidVel[j].vel[0] * K_EMF) >>8);  //initialize first velocity, scaled
+    }
+}
+
+
 // called from cmd.c
-void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel){
+void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel, int onceFlag){
     pidVelLUT* tempPID;
     int i;
-    nextPID[pid_num] = NULL;
     tempPID = otherBuff(pidVel, activePID[pid_num]);
     for (i = 0; i < NUM_VELS; i++)
     {
@@ -137,7 +139,10 @@ void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel){
         tempPID->delta[i]= delta[i];
         tempPID->vel[i]= vel[i];
     }
-    nextPID[pid_num] = tempPID;
+    tempPID->onceFlag = onceFlag;
+    if (activePID[pid_num]->onceFlag == 0){
+        nextPID[pid_num] = tempPID;
+    }
 }
 
 
@@ -373,19 +378,33 @@ void pidGetSetpoint(int j){
              pidObjs[j].index = 0;
              pidObjs[j].leg_stride++;  // one full leg revolution
     /**** maybe need to handle round off in position set point ***/
-             if(nextPID[j] != NULL){    //Swap pointer if not null
-                CRITICAL_SECTION_START;
-                activePID[j] = nextPID[j];
-                nextPID[j] = NULL;
-                CRITICAL_SECTION_END;
-             }
+             checkSwapBuff(j);
         }  
 		pidObjs[j].expire += activePID[j]->interval[pidObjs[j].index];  // expire time for next interval
         pidObjs[j].v_input = (activePID[j]->vel[pidObjs[j].index]);    //update to next velocity 
 	}
 }   
 
+void checkSwapBuff(int j){
+    if(nextPID[j] != NULL){    //Swap pointer if not null
+       if(nextPID[j]->onceFlag == 1){
+           pidVelLUT* tempPID;
+           CRITICAL_SECTION_START;
+           tempPID = activePID[j];
+           activePID[j] = nextPID[j];
+           nextPID[j] = tempPID;
+           CRITICAL_SECTION_END;
+       } else {
+       CRITICAL_SECTION_START;
+       activePID[j] = nextPID[j];
+       nextPID[j] = NULL;
+       CRITICAL_SECTION_END;
+       }
+    }
+}
+
  // select either back emf or backwd diff for vel est
+
 #define VEL_BEMF 0
 
 /* update state variables including motor position and velocity */
@@ -419,11 +438,11 @@ void pidGetState()
 		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
 		if (i==0)
 		{
-			pidObjs[i].p_state = p_state; //fix for encoder alignment
+			pidObjs[i].p_state = -p_state; //fix for encoder alignment
 		}
 		else
 		{
-			pidObjs[i].p_state = -p_state;
+			pidObjs[i].p_state = p_state;
 		}
 		
 	}

@@ -38,14 +38,51 @@
 #  Fernando L. Garcia Bermudez      2012-8-20    Initial release
 #
 
-import msvcrt, sys, traceback
+import sys, traceback
 import test_suite
 import time
 
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
 
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+
+getch = _Getch()
 #RADIO_DEV_NAME  = '/dev/tty.usbserial-*' or 'COMx'
-#RADIO_DEV_NAME = 'COM1'
 RADIO_DEV_NAME = 'COM3'
+# RADIO_DEV_NAME = '/dev/ttyUSB0'
 BS_BAUDRATE = 230400
 
 DEST_ADDR = '\x21\x02'
@@ -63,26 +100,34 @@ if __name__ == '__main__':
         #Initialization
         ts.SetGains(motorgains)
 
-
-        while msvcrt.kbhit():
-            ch = msvcrt.getch()
-
         while True:
-            keypress = msvcrt.getch()
+            keypress = getch()
             print '>',
 
             if keypress == 'p':
                 ts.PIDStart(duration)
-
             elif keypress == ' ':
                 ts.PIDSTAHP()
-
+            elif keypress == 'v':
+                print "Hold Gait"
+                ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])
+            elif keypress == 'b':
+                print "Enter Phase (deg):",
+                phase = long(int(raw_input()) * 65536.0/360)
+                ts.setPhase(phase)
+            elif keypress == 'n':
+                print "Turning gait: enter frequency, direction(-1,1): ",
+                x = raw_input()
+                if len(x):
+                    temp = map(int,x.split(','))
+                p = 1000.0/temp[0]
+                r = temp[1]
+                vel = [int(p), 0x1000*(r), 0x1000*(r), 0x1000*(r), 0x1000*(r), 0, int(p), 0x1000*(-r), 0x1000*(-r), 0x1000*(-r), 0x1000*(-r), 0]
+                ts.defProfile(vel)
             elif keypress == 'm':
                 ts.test_motorop()
-
             elif keypress == 'z':
                 ts.zeroPos()
-
             elif keypress == 'w':
                 ts.test_mpu()
             elif keypress == 'd':
@@ -94,22 +139,21 @@ if __name__ == '__main__':
             elif keypress == 'r':
                 print "Turn test. Enter leg frequency:",
                 p = 1000.0/int(raw_input())
-                ts.defProfile([100,0,0,0,0,100,0,0,0,0])
+                ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])
                 ts.PIDStart(duration)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+                print 'Send Start'
+                raw_input()
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0]
                 ts.defProfile(vel)
-                time.sleep(4.9*p/1000)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x2000>>2, 0x2000>>2, 0x8000>>2, 0x4000>>2]
-                ts.defProfile(vel)
-                time.sleep(0.9*p/1000)
-                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+                print 'Send Maneuver'
+                raw_input()
+                vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 1, int(p), 0x1000>>2, 0x1000>>2, 0x8000>>2, 0x6000>>2, 1]
                 ts.defProfile(vel)
                 time.sleep(5*p/1000)
                 ts.PIDSTAHP()
                 print "Done"
             elif keypress == 'g':
                 ts.SetGains()
-
             elif keypress == 'i':
                 ts.SetProfile()
             elif keypress == 'a':

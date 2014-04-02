@@ -39,8 +39,8 @@ void telemGetPID(){
 
     telemPIDdata.posL = pidObjs[0].p_state;
     telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input;
-    telemPIDdata.composR = pidObjs[1].p_input;
+    telemPIDdata.composL = pidObjs[0].p_input + pidObjs[0].interpolate;
+    telemPIDdata.composR = pidObjs[1].p_input + pidObjs[1].interpolate;
     telemPIDdata.dcL = pidObjs[0].output; // left
     telemPIDdata.dcR = pidObjs[1].output; // right
     telemPIDdata.bemfL = bemf[0];
@@ -83,7 +83,7 @@ void telemSetSamplesToSave(unsigned long n) {
 }
 
 void telemSendDataDelay(telemStruct_t* sample) {
-
+    delay_ms(5);
     radioSendData(RADIO_DEST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,
            (unsigned char*) sample, 0 );
     LED_2 = ~LED_2;

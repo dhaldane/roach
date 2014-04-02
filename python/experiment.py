@@ -4,7 +4,7 @@ authors: stanbaek, apullin
 
 """
 from lib import command
-import time,sys
+import time,sys,os
 import serial
 import shared
 
@@ -18,24 +18,34 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,20,100,0,0, 1800,20,100,0,0]
+    motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
     duration = 500
-    vel = 0
-    turn_rate = 0
+    rightFreq = 0
+    leftFreq = 0
+    phase = 0
     telemetry = True
     repeat = False
-    setVelProfile(0,0)
 
-    params = hallParams(motorgains, duration, vel, turn_rate, telemetry, repeat)
+    params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
     setMotorGains(motorgains)
+
+    leadIn = 10
+    leadOut = 10
+    strideFreq = 5
+    phase = 0x8000      # Alternating tripod
+    useFlag = 0
+    deltas = [.25, 0.25, 0.25, 0.125, 0.125, 0.5]
+
+    manParams = manueverParams(leadIn, leadOut, strideFreq, phase, useFlag, deltas)
 
     while True:
 
         if not(params.repeat):
-            settingsMenu(params)   
+            settingsMenu(params, manParams)   
 
         if params.telemetry:
             # Construct filename
+            # path     = '/home/duncan/Data/'
             path     = 'Data/'
             name     = 'trial'
             datetime = time.localtime()
@@ -43,7 +53,12 @@ def main():
             root     = path + dt_str + '_' + name
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
-            numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
+            print os.curdir
+            if manParams.useFlag == True:
+                duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
+                numSamples = int(ceil(1000 * duration))
+            else:
+                numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
             eraseFlashMem(numSamples)
 
         # Trigger telemetry save, which starts as soon as it is received
@@ -52,13 +67,16 @@ def main():
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
         #Start robot
-        xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
-
-        time.sleep(params.duration / 1000.0)
-        
+        if manParams.useFlag == True:
+            runManeuver(params, manParams)
+        else:
+            xb_send(0, command.SET_PHASE, pack('l', params.phase))
+            time.sleep(0.01)
+            xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
+            time.sleep(params.duration / 1000.0)
 
         if params.telemetry and query_yes_no("Save Data?"):
-            flashReadback(numSamples, params)
+            flashReadback(numSamples, params, manParams)
 
         repeatMenu(params)
 
