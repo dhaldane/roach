@@ -122,6 +122,13 @@ def settingsMenu(params, manParams):
         elif keypress == 'm':
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
+        elif keypress == 'o':
+            print 'Enter Duty Cycle (Left,Right) : ',
+            x = raw_input()
+            if len(x):
+                pwmDes = map(float,x.split(','))
+            xb_send(0, command.SET_MOTOR_MODE, pack('2h', pwmDes))
+            print 'Set Duty cycle: ' pwmDes
         elif keypress == 'b':
             print 'Manuever Enabled'
             manParams.useFlag = True
@@ -291,6 +298,14 @@ def proceed(params):
     xb_send(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
     print "Throttle = ",params.throttle,"duration =", params.duration
     time.sleep(0.1)
+
+def setMotorMode(motorgains):
+    count = 0
+    while not(shared.motor_gains_set):
+        print "Setting motor gains. Packet:",count
+        count = count + 1
+        xb_send(0, command.SET_MOTOR_MODE, pack('10h',*motorgains))
+
 
 def queryRobot():
     shared.robotQueried = False

@@ -41,6 +41,7 @@ static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsi
 
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
@@ -67,6 +68,7 @@ void cmdSetup(void) {
     cmd_func[CMD_TEST_RADIO] = &test_radio;
     cmd_func[CMD_TEST_MPU] = &test_mpu;
     cmd_func[CMD_SET_THRUST_OPEN_LOOP] = &cmdSetThrustOpenLoop;
+    cmd_func[CMD_SET_MOTOR_MODE] = &cmdSetMotorMode;
     cmd_func[CMD_PID_START_MOTORS] = &cmdPIDStartMotors;
     cmd_func[CMD_SET_PID_GAINS] = &cmdSetPIDGains;
     cmd_func[CMD_GET_AMS_POS] = &cmdGetAMSPos;
@@ -139,7 +141,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
         checkSwapBuff(i);
         pidOn(i);
     }
-
+    pidObjs[0].mode = 0;
     pidStartTimedTrial(run_time);
 
     return 1;
@@ -184,6 +186,18 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     EnableIntT1;
     return 1;
  } 
+
+ unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+
+
+    int thrust1 = frame[0] + (frame[1] << 8);
+    int thrust2 = frame[2] + (frame[3] << 8);
+
+    pidObjs[0].pwmDes = thrust1;
+    pidObjs[1].pwmDes = thrust2;
+
+    pidObjs[0].mode = 1;
+ }
 
  unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
     int Kp, Ki, Kd, Kaw, ff;

@@ -44,6 +44,8 @@ typedef struct
   	long preSat; // output value before saturations
 	int  output;	 //  control output u
  	char onoff; //boolean
+ 	char mode; //Motor mode: 1 iff PWM open loop control
+ 	int pwmDes; // Desired PWM
  	char timeFlag;
 	unsigned long run_time;
 	unsigned long start_time;
