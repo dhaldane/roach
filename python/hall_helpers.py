@@ -128,7 +128,7 @@ def settingsMenu(params, manParams):
             if len(x):
                 pwmDes = map(float,x.split(','))
             xb_send(0, command.SET_MOTOR_MODE, pack('2h', pwmDes))
-            print 'Set Duty cycle: ' pwmDes
+            print 'Set Duty cycle: ', pwmDes
         elif keypress == 'b':
             print 'Manuever Enabled'
             manParams.useFlag = True
