@@ -40,13 +40,13 @@ SetVelProfile   =   0x8D
 WhoAmI          =   0x8E                    
 zeroPos         =   0x90                    
 PIDStopMotors   =   0x92
+setPhaseCmd =   0x93
 
 #kImWidth = 160
 #kImHeight = 100
 
 ON = 1
 OFF = 0
-
 
 class TestSuite():
     '''Class representing the ImageProc test suite'''
@@ -183,11 +183,11 @@ class TestSuite():
     def SetProfile(self):
         header = chr(kStatusUnused) + chr(SetVelProfile)
         
-        print "Turn test. Enter leg frequency:",
+        print "Enter leg frequency:",
         p = 1000.0/int(raw_input())
-        vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2]
+        vel = [int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0, int(p), 0x4000>>2, 0x4000>>2, 0x4000>>2, 0x4000>>2, 0]
         print vel
-        data_out = header + ''.join(pack("10h",*vel))
+        data_out = header + ''.join(pack("12h",*vel))
 
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
@@ -195,10 +195,17 @@ class TestSuite():
 
     def defProfile(self, vel):
         header = chr(kStatusUnused) + chr(SetVelProfile)
-        data_out = header + ''.join(pack("10h",*vel))
+        data_out = header + ''.join(pack("12h",*vel))
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
             time.sleep(0.2)
+
+    def setPhase(self,offset):
+        header = chr(kStatusUnused) + chr(setPhaseCmd)
+        data_out = header + ''.join(pack("l",offset))
+        if(self.check_conn()):
+            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+            time.sleep(0.2)   
 
             
     def PIDStart(self, duration):
