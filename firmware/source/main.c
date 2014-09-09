@@ -38,6 +38,8 @@
 #include "uart_driver.h"
 #include "ppool.h"
 #include "carray.h"
+#include "sync_servo.h"
+
 
 #include <stdlib.h>
 
@@ -78,13 +80,14 @@ int main() {
 
     // Need delay for encoders to be ready
     delay_ms(100);
-    amsEncoderSetup();
+//    amsEncoderSetup();
     mpuSetup(1);
     tiHSetup();
     dfmemSetup(0);
     telemSetup();
     adcSetup();
     pidSetup();
+    servoSetup();
 
 
 
