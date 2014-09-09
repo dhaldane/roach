@@ -20,6 +20,7 @@
 #include "ams-enc.h"
 #include "carray.h"
 #include "telem.h"
+#include "sync_servo.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -48,6 +49,7 @@ static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, 
 static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdDriveServo(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 
 //Experiment/Flash Commands
 static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
@@ -81,6 +83,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_PHASE] = &cmdSetPhase;   
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
+    cmd_func[CMD_DRIVE_SERVO] = &cmdDriveServo;
 
 }
 
@@ -189,7 +192,6 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
 
  unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
 
-
     int thrust1 = frame[0] + (frame[1] << 8);
     int thrust2 = frame[2] + (frame[3] << 8);
 
@@ -197,23 +199,35 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     pidObjs[1].pwmDes = thrust2;
 
     pidObjs[0].mode = 1;
+    return 1;
+ }
+
+  unsigned char cmdDriveServo(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+    unsigned int setpoint = frame[0] + (frame[1] << 8);
+    float servoIn;
+
+    servoIn = setpoint/32768.0 - 1.0;
+    servoStart();
+    servoSet(servoIn);
+
+    return 1;
  }
 
  unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
     int Kp, Ki, Kd, Kaw, ff;
     int idx = 0;
 
-    Kp = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    Ki = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    Kd = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Kp  = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Ki  = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Kd  = frame[idx] + (frame[idx+1] << 8); idx+=2;
     Kaw = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    ff = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    ff  = frame[idx] + (frame[idx+1] << 8); idx+=2;
     pidSetGains(0,Kp,Ki,Kd,Kaw, ff);
-    Kp = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    Ki = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    Kd = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Kp  = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Ki  = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    Kd  = frame[idx] + (frame[idx+1] << 8); idx+=2;
     Kaw = frame[idx] + (frame[idx+1] << 8); idx+=2;
-    ff = frame[idx] + (frame[idx+1] << 8); idx+=2;
+    ff  = frame[idx] + (frame[idx+1] << 8); idx+=2;
     pidSetGains(1,Kp,Ki,Kd,Kaw, ff);
 
     radioSendData(RADIO_DEST_ADDR, status, CMD_SET_PID_GAINS, 20, frame, 0);
