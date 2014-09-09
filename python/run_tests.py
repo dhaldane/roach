@@ -108,6 +108,12 @@ if __name__ == '__main__':
                 ts.PIDStart(duration)
             elif keypress == ' ':
                 ts.PIDSTAHP()
+            elif keypress == 's':
+                print 'Enter Setpoint 0 - 1.0:',
+                x = raw_input()
+                setpoint = (int) (float(x)*65535)
+                print 'Setpoint:', setpoint
+                ts.driveServo(setpoint)
             elif keypress == 'v':
                 print "Hold Gait"
                 ts.defProfile([100,0,0,0,0,0,100,0,0,0,0,0])

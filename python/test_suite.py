@@ -41,6 +41,7 @@ WhoAmI          =   0x8E
 zeroPos         =   0x90                    
 PIDStopMotors   =   0x92
 setPhaseCmd =   0x93
+setDriveServo =   0x95
 
 #kImWidth = 160
 #kImHeight = 100
@@ -203,6 +204,13 @@ class TestSuite():
     def setPhase(self,offset):
         header = chr(kStatusUnused) + chr(setPhaseCmd)
         data_out = header + ''.join(pack("l",offset))
+        if(self.check_conn()):
+            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+            time.sleep(0.2)   
+
+    def driveServo(self,setpoint):
+        header = chr(kStatusUnused) + chr(setDriveServo)
+        data_out = header + ''.join(pack("H",setpoint))
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
             time.sleep(0.2)   
