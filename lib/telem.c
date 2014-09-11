@@ -12,6 +12,7 @@
 #include "adc_pid.h"
 #include "mpu6000.h"
 #include "pid-ip2.5.h"
+#include "settings.h"
 #include <string.h> //for memcpy
 
 unsigned int telemPacketSize;
@@ -84,7 +85,7 @@ void telemSetSamplesToSave(unsigned long n) {
 
 void telemSendDataDelay(telemStruct_t* sample) {
     delay_ms(5);
-    radioSendData(RADIO_DEST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,
+    radioSendData(RADIO_DST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,   //TODO: Robot should respond to source of query, not hardcoded address
            (unsigned char*) sample, 0 );
     LED_2 = ~LED_2;
 }
