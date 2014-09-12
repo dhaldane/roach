@@ -66,12 +66,12 @@ def main():
         # Pause and wait to start run, including leadin time
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
+            time.sleep(shared.leadinTime/1000.0)
         #Start robot
         if manParams.useFlag == True:
             runManeuver(params, manParams)
         else:
-            xb_send(0, command.SET_PHASE, pack('l', params.phase))
-            time.sleep(0.01)
+            # xb_send(0, command.SET_PHASE, pack('l', params.phase))
             xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
             time.sleep(params.duration / 1000.0)
 

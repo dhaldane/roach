@@ -25,7 +25,7 @@ awake = True;
 # Cross-module variable sharing; these need default values
 imudata = []
 dataFileName = ''
-leadinTime = 0
+leadinTime = 500
 leadoutTime = 0
 angRateDeg = "NOT SET"  #This is only for writing the file header
 angRate = "NOT SET"
