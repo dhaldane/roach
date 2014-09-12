@@ -109,7 +109,8 @@ def menu():
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
 def settingsMenu(params, manParams):
-    print "t:duration   |m:telemetry   |p = motion profile  |b = Motion queue   |n = deltas"
+    print "t:duration   |m:telemetry   |p = motion profile"
+    print "|b = Motion queue   |n = deltas  |s = servo"
     print "Proceed: Space Bar"
     while True:
         print '>',
@@ -122,6 +123,11 @@ def settingsMenu(params, manParams):
         elif keypress == 'm':
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
+        elif keypress == 's':
+            print 'Enter Setpoint 0 - 1.0:',
+            x = raw_input()
+            setpoint = (int) (float(x)*65535)
+            xb_send(0, command.SET_DRIVE_SERVO, pack("H",setpoint))
         elif keypress == 'o':
             print 'Enter Duty Cycle (Left,Right) : ',
             x = raw_input()
@@ -306,7 +312,6 @@ def setMotorMode(motorgains):
         count = count + 1
         xb_send(0, command.SET_MOTOR_MODE, pack('10h',*motorgains))
 
-
 def queryRobot():
     shared.robotQueried = False
     queries = 1
@@ -388,7 +393,7 @@ def writeFileHeader(dataFileName, params, manParams):
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')
     # order for wiring on RF Turner
-    fileout.write('"% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt "\n')
+    fileout.write('"% time | Leg Pos | GyroX | GryoY | GryoZ | AX | AY | AZ  VBatt | Servo Setpoint "\n')
     fileout.close()
 
 def eraseFlashMem(numSamples):
