@@ -38,13 +38,14 @@ telemStruct_t telemPIDdata;
 void telemGetPID(){
 
     telemPIDdata.posL = pidObjs[0].p_state;
-    telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input + pidObjs[0].interpolate;
-    telemPIDdata.composR = pidObjs[1].p_input + pidObjs[1].interpolate;
-    telemPIDdata.dcL = pidObjs[0].output; // left
-    telemPIDdata.dcR = pidObjs[1].output; // right
-    telemPIDdata.bemfL = bemf[0];
-    telemPIDdata.bemfR = bemf[1];
+    telemPIDdata.servoSet = pidObjs[0].bldcThrottle;
+    // telemPIDdata.posR = pidObjs[1].p_state;
+    // telemPIDdata.composL = pidObjs[0].p_input + pidObjs[0].interpolate;
+    // telemPIDdata.composR = pidObjs[1].p_input + pidObjs[1].interpolate;
+    // telemPIDdata.dcL = pidObjs[0].output; // left
+    // telemPIDdata.dcR = pidObjs[1].output; // right
+    // telemPIDdata.bemfL = bemf[0];
+    // telemPIDdata.bemfR = bemf[1];
 
     mpuGetGyro(gdata);
     mpuGetXl(xldata);
