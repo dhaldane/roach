@@ -68,7 +68,7 @@ int main() {
 
     // Radio setup
     radioInit(RADIO_RXPQ_MAX_SIZE, RADIO_TXPQ_MAX_SIZE, 0);
-    radioSetChannel(RADIO_MY_CHAN);
+    radioSetChannel(RADIO_CHANNEL);
     radioSetSrcAddr(RADIO_SRC_ADDR);
     radioSetSrcPanID(RADIO_PAN_ID);
 
