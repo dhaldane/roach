@@ -24,6 +24,7 @@
 #include "ppool.h"
 #include "dfmem.h"
 #include "telem.h"
+#include "sync_servo.h"
 
 #include <stdlib.h> // for malloc
 #include "init.h"  // for Timer1
@@ -62,6 +63,8 @@ char calib_flag = 0;   // flag is set if doing calibration
 long offsetAccumulatorL, offsetAccumulatorR;
 unsigned int offsetAccumulatorCounter;
 
+float servoIn;
+char openLoopFlag = 0;
 
 
 // 2 last readings for median filter
@@ -336,6 +339,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                     if(t1_ticks > lastMoveTime){ // turn off if done running all legs
                         pidObjs[0].onoff = 0;
                         pidObjs[1].onoff = 0;
+                        openLoopFlag = 0;
+                        servoSet(-1);
                     } 
                 } 
                 else {                 
@@ -343,17 +348,21 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                 }
             }
         }
-        if (pidObjs[0].mode == 0)
+
+        if (pidObjs[0].mode == 0 && pidObjs[0].onoff)
         {
         pidSetControl();
-        } else if (pidObjs[0].mode == 1)
+        } else if (pidObjs[0].mode == 1 && openLoopFlag == 0 && pidObjs[0].onoff)
         {
-            tiHSetDC(1, pidObjs[0].pwmDes);
-            tiHSetDC(2, pidObjs[1].pwmDes);
+            // tiHSetDC(1, pidObjs[0].pwmDes);
+            // tiHSetDC(2, pidObjs[1].pwmDes);
+            openLoopFlag = 1;
+            servoIn = pidObjs[0].bldcThrottle/32768.0 - 1.0;
+            servoSet(servoIn);
         }
 
+        telemGetPID();
         if(pidObjs[0].onoff) {
-            telemGetPID();
 
             // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
             // if(uart_tx_packet != NULL) {

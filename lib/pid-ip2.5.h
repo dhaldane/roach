@@ -46,6 +46,7 @@ typedef struct
  	char onoff; //boolean
  	char mode; //Motor mode: 1 iff PWM open loop control
  	int pwmDes; // Desired PWM
+ 	unsigned int bldcThrottle; // Setpoint for servo output
  	char timeFlag;
 	unsigned long run_time;
 	unsigned long start_time;

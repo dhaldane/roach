@@ -144,7 +144,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
         checkSwapBuff(i);
         pidOn(i);
     }
-    pidObjs[0].mode = 0;
+    // pidObjs[0].mode = 0;
     pidStartTimedTrial(run_time);
 
     return 1;
@@ -203,12 +203,12 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
  }
 
   unsigned char cmdDriveServo(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
-    unsigned int setpoint = frame[0] + (frame[1] << 8);
-    float servoIn;
 
-    servoIn = setpoint/32768.0 - 1.0;
+    unsigned int setpoint = frame[0] + (frame[1] << 8);
+
     servoStart();
-    servoSet(servoIn);
+    pidObjs[0].mode = 1;
+    pidObjs[0].bldcThrottle = setpoint;
 
     return 1;
  }
