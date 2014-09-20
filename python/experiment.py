@@ -11,7 +11,9 @@ import shared
 from hall_helpers import *
 
 def main():    
-    setupSerial()
+    xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
+    
+    R1 = Robot('\x21\x02', xb)
 
     # Send robot a WHO_AM_I command, verify communications
     queryRobot()
