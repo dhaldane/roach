@@ -12,7 +12,6 @@ from math import ceil,floor
 import numpy as np
 
 
-
 class gaitParams:
     rightFreq = []
     leftFreq = []
@@ -20,7 +19,8 @@ class gaitParams:
     strideFreq = 5
     repeat = []
     
-    
+    deltasLeft = [0.25, 0.25, 0.25]
+    deltasRight = [0.25, 0.25, 0.26]
     
     def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, repeat):
         self.motorgains = motorgains
@@ -68,58 +68,190 @@ class Velociroach:
     def sendEcho(self, msg):
         self.tx( 0, command.ECHO, msg)
         
+    def query(self, retries = 8):
+        self.robot_queried = False
+        tries = 1
+        while not(self.robot_queried) and (tries <= retries):
+            self.clAnnounce()
+            print "Querying robot , ",tries,"/",retries
+            self.tx( 0,  command.WHO_AM_I, "Robot Echo") #sent text is unimportant
+            tries = tries + 1
+            time.sleep(0.1)   
         
+    def eraseFlashMem(self, timeout = 8):
+        eraseStartTime = time.time()
+        self.tx( 0, command.ERASE_SECTORS, pack('L',self.numSamples))
+        self.clAnnounce()
+        print "Started flash erase ..."
+        while not (self.flash_erased):
+            #sys.stdout.write('.')
+            time.sleep(0.25)
+            if (time.time() - eraseStartTime) > timeout:
+                print"Flash erase timeout, retrying;"
+                self.tx( 0, command.ERASE_SECTORS, pack('L',self.numSamples))
+                eraseStartTime = time.time()    
         
+    def setPhase(self, phase):
+        self.tx( 0, command.SET_PHASE, pack('l', phase))
+        time.sleep(0.01)        
+    
+    def startTimedRun(self, duration):
+        self.tx( 0, command.START_TIMED_RUN, pack('h', phase))
+        time.sleep(duration / 1000.0)
         
+    def findFileName(self):   
+        # Construct filename
+        path     = 'Data/'
+        name     = 'trial'
+        datetime = time.localtime()
+        dt_str   = time.strftime('%Y.%m.%d_%H.%M.%S', datetime)
+        root     = path + dt_str + '_' + name
+        self.dataFileName = root + '_imudata.txt'
+        #self.clAnnounce()
+        #print "Data file:  ", shared.dataFileName
         
+    def setVelProfile(params, manParams, manFlag):
+        p = 1000.0/manParams.strideFreq
+        if manFlag == True:
+            delta = manParams.deltas
+            deltaConv = 0x4000
+            lastLeftDelta = 1-sum(manParams.deltas[:3])
+            lastRightDelta = 1-sum(manParams.deltas[3:])
+            temp = [int(p), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                    int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
+        # Alternating Tripod
+        else: 
+            temp = [int(1000.0/params.rightFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
+                    int(1000.0/params.leftFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0]
+        print temp
+        self.tx( 0, command.SET_VEL_PROFILE, pack('12h', phase))   
         
-        
-        
-        
-        
-        
-        
-        
+    def setMotorMode(motorgains, retries = 8 ):
+        tries = 1
+        self.motorGains = motorgains
+        self.motor_gains_set = False
+        while not(self.motor_gains_set) and (tries <= retries):
+            self.clAnnounce()
+            print "Setting motor gains...   ",tries,"/8"
+            self.tx( 0, command.SET_MOTOR_MODE, pack('10h',*gains))
+            tries = tries + 1
+            time.sleep(0.1)
+    
+    ######TODO : sort out this function and flashReadback below
+    def downloadTelemetry(self, timeout = 5):
+        #supress callback output messages for the duration of download
+        self.VERBOSE = False
+        self.clAnnounce()
+        print "Started telemetry download"
+        self.tx( 0, command.FLASH_READBACK, pack('=L',self.numSamples))
+                
+        dlStart = time.time()
+        shared.last_packet_time = dlStart
+        #bytesIn = 0
+        while self.imudata.count([]) > 0:
+            time.sleep(0.02)
+            dlProgress(self.numSamples - self.imudata.count([]) , self.numSamples)
+            if (time.time() - shared.last_packet_time) > timeout:
+                print ""
+                self.clAnnounce()
+                print "Readback timeout exceeded, restarting."
+                print "Missed", self.imudata.count([]), "packets."
+                for index,item in enumerate(self.imudata):
+                    if item == []:
+                        print "Didn't get packet#",index+1
+            
+                raw_input("Press Enter to start readback ...")
+                self.imudata = [ [] ] * self.numSamples
+                self.clAnnounce()
+                print "Started telemetry download"
+                dlStart = time.time()
+                shared.last_packet_time = dlStart
+                self.tx( 0, command.FLASH_READBACK, pack('=L',self.numSamples))
 
-class _Getch:
-    """Gets a single character from standard input.  Does not echo to the
-screen."""
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            self.impl = _GetchUnix()
+        dlEnd = time.time()
+        dlTime = dlEnd - dlStart
+        #Final update to download progress bar to make it show 100%
+        dlProgress(self.numSamples-self.imudata.count([]) , self.numSamples)
+        totBytes = 52*self.numSamples
+        datarate = totBytes / dlTime / 1000.0
+        print '\n'
+        self.clAnnounce()
+        print "Got ",self.numSamples,"samples in ",dlTime,"seconds"
+        self.clAnnounce()
+        print "DL rate: {0:.2f} KB/s".format(datarate)
+        
+        #enable callback output messages
+        self.VERBOSE = True
 
-    def __call__(self): return self.impl()
+        print ""
+        self.saveImudata()
+        #Done with flash download and save
 
+    ######TODO : sort out this function
+    def flashReadback(numSamples, params, manParams):
+        delay = 0.006
+        # raw_input("Press any key to start readback of %d packets ..." % numSamples)
+        print "started readback"
+        shared.imudata = [ [] ] * numSamples  # reset imudata structure
+        shared.pkts = 0  # reset packet count???
+        xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
+        # While waiting, write parameters to start of file
+        print shared.dataFileName
+        writeFileHeader(shared.dataFileName, params, manParams)     
+        time.sleep(delay*numSamples + 1)
+        # while shared.pkts != numSamples:
+        #     print "Retry"
+        #     shared.imudata = [ [] ] * numSamples
+        #     shared.pkts = 0
+        #     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
+        #     time.sleep(delay*numSamples + 3)
+        #     if shared.pkts > numSamples:
+        #         print "too many packets"
+        #         break
+        raw_input("\nReadback Done?")
+        fileout = open(shared.dataFileName, 'a')
+        np.savetxt(fileout , np.array([e for e in shared.imudata if len(e)]), '%d', delimiter = ',') # Write non-empty lists in imudata to file
+        fileout.close()
+        print "data saved to ",shared.dataFileName
 
-class _GetchUnix:
-    def __init__(self):
-        import tty, sys
+    def saveImudata(self):
+        self.findFileName()
+        self.writeFileHeader()
+        fileout = open(self.dataFileName, 'a')
+        np.savetxt(fileout , np.array(self.imudata), self.telemFormatString, delimiter = ',')
+        fileout.close()
+        self.clAnnounce()
+        print "Telemetry data saved to", self.dataFileName
+        
+    def writeFileHeader(self, params, manParams):
+        fileout = open(self.dataFileName,'w')
+        #write out parameters in format which can be imported to Excel
+        today = time.localtime()
+        date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
+        date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
+        fileout.write('%  Data file recorded ' + date + '\n')
 
-    def __call__(self):
-        import sys, tty, termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+        if manParams.useFlag == True:
+            fileout.write('%  Stride Frequency         = ' +repr(manParams.strideFreq) + '\n')
+            fileout.write('%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '\n')
+            fileout.write('%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '\n')
+        else:    
+            fileout.write('%  Right Stride Frequency         = ' +repr(params.rightFreq) + '\n')
+            fileout.write('%  Left Stride Frequency         = ' +repr(params.leftFreq) + '\n')
+            fileout.write('%  Phase (Fractional)         = ' +repr(params.phase) + '\n')
 
+        fileout.write('%  Experiment.py \n')
+        fileout.write('%  Motor Gains    = ' + repr(params.motorgains) + '\n')
+        fileout.write('% Columns: \n')
+        # order for wiring on RF Turner
+        fileout.write('% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt\n')
+        fileout.close()
 
-class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-
-    def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
-
-
-getch = _Getch()
-
+    
+    
+        
+        
+        
 class hallParams:
     motorgains = []
     duration = []
@@ -154,116 +286,10 @@ class manueverParams:
         
 
 
-def xb_safe_exit():
-    print "Halting xb"
-    shared.xb.halt()
-    print "Closing serial"
-    shared.ser.close()
-    print "Exiting..."
-    sys.exit(1)
 
-def xb_send(status, type, data):
-    payload = chr(status) + chr(type) + ''.join(data)
-    shared.xb.tx(dest_addr = shared.DEST_ADDR, data = payload)
 
-#send user selected command
-def rawCommand():
-    xb_send(0,0xff, pack('h',0))
 
-def menu():
-    print "-------------------------------------"
-    print "Keyboard control Nov. 12, 2011"
-    print "m:menu     |q:quit     |r:reset      |n: name?"
-    print "w:left+    |s:left-    |x:left off   |b: bogus command"
-    print "e:right+   |d:right-   |c:right off  |<sp>: all off"
-    print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
-def settingsMenu(params, manParams):
-    print "t:duration   |m:telemetry   |p = motion profile  |b = Motion queue   |n = deltas"
-    print "Proceed: Space Bar"
-    while True:
-        print '>',
-        keypress = getch()
-        if keypress == ' ':
-            break
-        elif keypress == 't':
-            print 'current duration',params.duration,' new value:',
-            params.duration = int(raw_input())
-        elif keypress == 'm':
-            params.telemetry = not(params.telemetry)
-            print 'Telemetry recording', params.telemetry
-        elif keypress == 'o':
-            print 'Enter Duty Cycle (Left,Right) : ',
-            x = raw_input()
-            if len(x):
-                pwmDes = map(float,x.split(','))
-            xb_send(0, command.SET_MOTOR_MODE, pack('2h', pwmDes))
-            print 'Set Duty cycle: ', pwmDes
-        elif keypress == 'b':
-            print 'Manuever Enabled'
-            manParams.useFlag = True
-            print 'Enter movement string (#Lead in Strides, Lead Out, Stride Frequncy (Hz):',
-            x = raw_input()
-            if len(x):
-                temp = map(float,x.split(','))
-            manParams.leadIn = temp[0]
-            manParams.leadOut = temp[1]
-            manParams.strideFreq = temp[2]
-        elif keypress == 'n':
-            print 'Manuever Enabled'
-            manParams.useFlag = True
-            print 'Enter 6 fractional deltas (0-1) L-R : ',
-            x = raw_input()
-            if len(x):
-                manParams.deltas = map(float,x.split(','))
-            print 'Deltas: ', manParams.deltas
-        elif keypress == 'p':
-            print 'Manuever Disabled'
-            manParams.useFlag = False
-            print 'Right Leg Frequency, Left Leg Frequency, Phase (degrees): ',
-            x = raw_input()
-            if len(x):
-                temp = map(float,x.split(','))
-            params.rightFreq = temp[0]
-            params.leftFreq = temp[1]
-            params.phase = temp[2] * 65536.0/360
-            setVelProfile(params, manParams, 0)
-
-def repeatMenu(params):
-    print "SPACE: Repeat with same settings  |q:quit"
-    print "s: Settings                       |z:zero motors"
-    while True:
-        print '>',
-        keypress = getch()
-        if keypress == ' ':
-            params.repeat = True
-            break
-        elif keypress == 's':
-            params.repeat = False
-            break
-        elif keypress == 'z':
-             xb_send(0, command.ZERO_POS,  "Zero motor")
-        elif keypress == 'q': 
-            print "Exit."
-            xb.halt()
-            ser.close()
-            sys.exit(0)
-
-def setVelProfile(params, manParams, manFlag):
-    p = 1000.0/manParams.strideFreq
-    if manFlag == True:
-        delta = manParams.deltas
-        deltaConv = 0x4000
-        lastLeftDelta = 1-sum(manParams.deltas[:3])
-        lastRightDelta = 1-sum(manParams.deltas[3:])
-        temp = [int(p), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
-                int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
-    # Alternating Tripod
-    else: 
-        temp = [int(1000.0/params.rightFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
-                int(1000.0/params.leftFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0]
-    print temp
-    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
 
 def runManeuver(params, manParams):
     p = 1.0/manParams.strideFreq
@@ -322,45 +348,9 @@ def getVelProfile(params):
     #params.intervals = intervals
     #params.vel = vel
         
-    
-# set robot control gains
-def setMotorGains(motorgains):
-    count = 0
-    while not(shared.motor_gains_set):
-        print "Setting motor gains. Packet:",count
-        count = count + 1
-        xb_send(0, command.SET_PID_GAINS, pack('10h',*motorgains))
-        time.sleep(0.3)
-        if count > 8:
-            xb_safe_exit()
+   
 
-# allow user to set robot gain parameters
-def readinGains(lr, params):
-    print 'Rmotor gains [Kp Ki Kd Kanti-wind ff]=', params.motorgains[0:5]
-    print 'Lmotor gains [Kp Ki Kd Kanti-wind ff]=', params.motorgains[5:11]  
-    x = None
-    while not x:
-        try:
-            print 'Enter ',lr,'motor gains ,<csv> [Kp, Ki, Kd, Kanti-wind, ff]',
-            x = raw_input()
-        except ValueError:
-            print 'Invalid Number'
-    if len(x):
-        motor = map(int,x.split(','))
-        if len(motor) == 5:
-            print lr,'motor gains', motor
-# enable sensing gains again
-            shared.motor_gains_set = False
-            if lr == 'R':
-                params.motorgains[0:5] = motor
-# temp - set both gains same
-                params.motorgains[5:11] = motor
-            else:
-                params.motorgains[5:11] = motor
-        else:
-            print 'not enough gain values'
-            
-    
+
 
 # execute move command
 def proceed(params):
@@ -369,140 +359,20 @@ def proceed(params):
     print "Throttle = ",params.throttle,"duration =", params.duration
     time.sleep(0.1)
 
-def setMotorMode(motorgains):
-    count = 0
-    while not(shared.motor_gains_set):
-        print "Setting motor gains. Packet:",count
-        count = count + 1
-        xb_send(0, command.SET_MOTOR_MODE, pack('10h',*motorgains))
 
-
-def queryRobot():
-    shared.robotQueried = False
-    queries = 1
-    while not(shared.robotQueried) and (queries < shared.maxQueries):
-        print "Querying robot, try ",queries,"/",shared.maxQueries
-        xb_send(0, command.WHO_AM_I, "Robot Echo")
-        time.sleep(0.3)
-        queries = queries + 1
-    if queries == shared.maxQueries:
-        print "Unable to query robot."
-        xb_safe_exit()
-    #Otherwise, control falls through back to the program
-
-def setupSerial():
-    print "Setting up serial ..."
-    try:
-        shared.ser = serial.Serial(shared.BS_COMPORT, shared.BS_BAUDRATE, \
-                    timeout=3, rtscts=0)
-    except serial.serialutil.SerialException:
-        print "Could not open serial port:",shared.BS_COMPORT
-        print "Exiting ..."
-        sys.exit(1)
         
-    if shared.ser.isOpen():
-        print "Serial open. Using port",shared.BS_COMPORT
-    shared.xb = XBee(shared.ser, callback = xbee_received)
 
 
-def getDstAddrString():
-    return hex(256* ord(shared.DEST_ADDR[0])+ ord(shared.DEST_ADDR[1]))
-    
-def sendWhoAmI():
-    xb_send(0, command.WHO_AM_I, "Robot Echo") 
-
-def flashReadback(numSamples, params, manParams):
-    delay = 0.006
-    # raw_input("Press any key to start readback of %d packets ..." % numSamples)
-    print "started readback"
-    shared.imudata = [ [] ] * numSamples  # reset imudata structure
-    shared.pkts = 0  # reset packet count???
-    xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
-    # While waiting, write parameters to start of file
-    print shared.dataFileName
-    writeFileHeader(shared.dataFileName, params, manParams)     
-    time.sleep(delay*numSamples + 1)
-    # while shared.pkts != numSamples:
-    #     print "Retry"
-    #     shared.imudata = [ [] ] * numSamples
-    #     shared.pkts = 0
-    #     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
-    #     time.sleep(delay*numSamples + 3)
-    #     if shared.pkts > numSamples:
-    #         print "too many packets"
-    #         break
-    raw_input("\nReadback Done?")
-    fileout = open(shared.dataFileName, 'a')
-    np.savetxt(fileout , np.array([e for e in shared.imudata if len(e)]), '%d', delimiter = ',') # Write non-empty lists in imudata to file
-    fileout.close()
-    print "data saved to ",shared.dataFileName
-        
-def writeFileHeader(dataFileName, params, manParams):
-    fileout = open(dataFileName,'w')
-    #write out parameters in format which can be imported to Excel
-    today = time.localtime()
-    date = str(today.tm_year)+'/'+str(today.tm_mon)+'/'+str(today.tm_mday)+'  '
-    date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
-    fileout.write('"Data file recorded ' + date + '"\n')
-
-    if manParams.useFlag == True:
-        fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
-        fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
-        fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
-    else:    
-        fileout.write('"%  Right Stride Frequency         = ' +repr(params.rightFreq) + '"\n')
-        fileout.write('"%  Left Stride Frequency         = ' +repr(params.leftFreq) + '"\n')
-        fileout.write('"%  Phase (Fractional)         = ' +repr(params.phase) + '"\n')
-
-    fileout.write('"%  Experiment.py "\n')
-    fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
-    fileout.write('"% Columns: "\n')
-    # order for wiring on RF Turner
-    fileout.write('"% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt "\n')
-    fileout.close()
-
-def eraseFlashMem(numSamples):
-    xb_send(0, command.ERASE_SECTORS, pack('h',numSamples))
-    print "Started erase, Enter to continue"
 
 def startTelemetrySave(numSamples):
     temp=[numSamples]
     print 'temp =',temp,'\n'
     xb_send(0, command.START_TELEMETRY, pack('h',*temp))
 
-def query_yes_no(question, default="yes"):
-    """Ask a yes/no question via raw_input() and return their answer.
-
-    "question" is a string that is presented to the user.
-    "default" is the presumed answer if the user just hits <Enter>.
-        It must be "yes" (the default), "no" or None (meaning
-        an answer is required of the user).
-
-    The "answer" return value is one of "yes" or "no".
-    """
-    valid = {"yes":True,   "y":True,  "ye":True,
-             "no":False,     "n":False}
-    if default == None:
-        prompt = " [y/n] "
-    elif default == "yes":
-        prompt = " [Y/n] "
-    elif default == "no":
-        prompt = " [y/N] "
-    else:
-        raise ValueError("invalid default answer: '%s'" % default)
-
-    while True:
-        sys.stdout.write(question + prompt)
-        choice = raw_input().lower()
-        if default is not None and choice == '':
-            return valid[default]
-        elif choice in valid:
-            return valid[choice]
-        else:
-            sys.stdout.write("Please respond with 'yes' or 'no' "\
-                             "(or 'y' or 'n').\n")
-                             
-                             
+def startTelemetrySave(self):
+        self.clAnnounce()
+        print "Started telemtry save"
+        self.tx( 0, command.SPECIAL_TELEMETRY, pack('L',self.numSamples))
                              
                              
                              
@@ -527,4 +397,49 @@ def setupSerial(COMPORT , BAUDRATE , timeout = 3, rtscts = 0):
     ser.flushOutput()
     return XBee(ser, callback = xbee_received)
     
+    
+def xb_safe_exit():
+    print "Halting xb"
+    shared.xb.halt()
+    print "Closing serial"
+    shared.ser.close()
+    print "Exiting..."
+    sys.exit(1)
+    
+
+   
+def verifyAllMotorGainsSet():
+    #Verify all robots have motor gains set
+    for r in shared.ROBOTS:
+        if not(r.motor_gains_set):
+            print "CRITICAL : Could not SET MOTOR GAINS on robot 0x%02X" % r.DEST_ADDR_int
+            xb_safe_exit()
+
+def verifyAllSteeringGainsSet():
+    #Verify all robots have motor gains set
+    for r in shared.ROBOTS:
+        if not(r.steering_gains_set):
+            print "CRITICAL : Could not SET STEERING GAINS on robot 0x%02X" % r.DEST_ADDR_int
+            xb_safe_exit()
+            
+def verifyAllSteeringRateSet():
+    #Verify all robots have motor gains set
+    for r in shared.ROBOTS:
+        if not(r.steering_gains_set):
+            print "CRITICAL : Could not SET STEERING GAINS on robot 0x%02X" % r.DEST_ADDR_int
+            xb_safe_exit()
+            
+def verifyAllTailGainsSet():
+    #Verify all robots have motor gains set
+    for r in shared.ROBOTS:
+        if not(r.tail_gains_set):
+            print "CRITICAL : Could not SET TAIL GAINS on robot 0x%02X" % r.DEST_ADDR_int
+            xb_safe_exit()
+            
+def verifyAllQueried():            
+    for r in shared.ROBOTS:
+        if not(r.robot_queried):
+            print "CRITICAL : Could not query robot 0x%02X" % r.DEST_ADDR_int
+            xb_safe_exit()
+
     

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """
-authors: stanbaek, apullin
+authors: apullin
+
+This script will run an experiment with one or several Velociroach robots.
+
+The main function will send all the setup parameters to the robots, execute defined manoeuvres, and record telemetry.
 
 """
 from lib import command
@@ -8,27 +12,24 @@ import time,sys,os
 import serial
 import shared
 
-from hall_helpers import *
+from velociroach import *
 
 def main():    
     xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
     
-    R1 = Robot('\x21\x02', xb)
+    R1 = Velociroach('\x21\x02', xb)
+    
+    shared.ROBOTS = [R1] #This is neccesary so callbackfunc can reference robots
+    shared.xb = xb           #This is neccesary so callbackfunc can halt before exit
 
     # Send robot a WHO_AM_I command, verify communications
-    queryRobot()
+    R1.queryRobot()
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
-    duration = 500
-    rightFreq = 0
-    leftFreq = 0
-    phase = 0
-    telemetry = True
-    repeat = False
 
-    params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
+    params = hallParams(motorgains, duration=500, rightFreq=0, leftFreq=0, phase=0, telemetry=True, repeat=False)
     setMotorGains(motorgains)
 
     leadIn = 10
@@ -36,7 +37,7 @@ def main():
     strideFreq = 5
     phase = 0x8000      # Alternating tripod
     useFlag = 0
-    deltas = [.25, 0.25, 0.25, 0.125, 0.125, 0.5]
+    deltas = [.25, 0.25, 0.25, 0.25, 0.25, 0.25]
 
     manParams = manueverParams(leadIn, leadOut, strideFreq, phase, useFlag, deltas)
 
@@ -46,16 +47,8 @@ def main():
             settingsMenu(params, manParams)   
 
         if params.telemetry:
-            # Construct filename
-            # path     = '/home/duncan/Data/'
-            path     = 'Data/'
-            name     = 'trial'
-            datetime = time.localtime()
-            dt_str   = time.strftime('%Y.%m.%d_%H.%M.%S', datetime)
-            root     = path + dt_str + '_' + name
-            shared.dataFileName = root + '_imudata.txt'
-            print "Data file:  ", shared.dataFileName
-            print os.curdir
+            R1.writeFileHeader()
+            
             if manParams.useFlag == True:
                 duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
                 numSamples = int(ceil(1000 * duration))
@@ -72,11 +65,9 @@ def main():
         if manParams.useFlag == True:
             runManeuver(params, manParams)
         else:
-            xb_send(0, command.SET_PHASE, pack('l', params.phase))
-            time.sleep(0.01)
-            xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
-            time.sleep(params.duration / 1000.0)
-
+            R1.setPhase(params.phase)
+            R1.startTimedRun(params.duration)
+            
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)
 
