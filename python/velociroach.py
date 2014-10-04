@@ -40,7 +40,7 @@ class Velociroach:
     angRateDeg = 0;
     angRate = 0;
     dataFileName = ''
-    imudata = [ [] ]
+    telemtryData = [ [] ]
     numSamples = 0
     telemSampleFreq = 1000
     VERBOSE = True
@@ -91,12 +91,16 @@ class Velociroach:
                 eraseStartTime = time.time()    
         
     def setPhase(self, phase):
+        self.clAnnounce()
+        print "Setting phase ... "
         self.tx( 0, command.SET_PHASE, pack('l', phase))
-        time.sleep(0.01)        
+        time.sleep(0.05)        
     
     def startTimedRun(self, duration):
-        self.tx( 0, command.START_TIMED_RUN, pack('h', phase))
-        time.sleep(duration / 1000.0)
+        self.clAnnounce()
+        print "Starting timed run of",duration," ms"
+        self.tx( 0, command.START_TIMED_RUN, pack('h', duration))
+        time.sleep(0.05)
         
     def findFileName(self):   
         # Construct filename
@@ -109,29 +113,32 @@ class Velociroach:
         #self.clAnnounce()
         #print "Data file:  ", shared.dataFileName
         
-    def setVelProfile(params, manParams, manFlag):
-        p = 1000.0/manParams.strideFreq
-        if manFlag == True:
-            delta = manParams.deltas
-            deltaConv = 0x4000
-            lastLeftDelta = 1-sum(manParams.deltas[:3])
-            lastRightDelta = 1-sum(manParams.deltas[3:])
-            temp = [int(p), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
-                    int(p), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
-        # Alternating Tripod
-        else: 
-            temp = [int(1000.0/params.rightFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0, \
-                    int(1000.0/params.leftFreq), 0x1000, 0x1000, 0x1000, 0x1000, 0]
-        print temp
-        self.tx( 0, command.SET_VEL_PROFILE, pack('12h', phase))   
+    def setVelProfile(self, gaitConfig):
+        self.clAnnounce()
+        print "Setting stride velocity profile ... "
         
-    def setMotorMode(motorgains, retries = 8 ):
+        periodLeft = 1000.0 / gaitConfig.leftFreq
+        periodRight = 1000.0 / gaitConfig.rightFreq
+        
+        deltaConv = 0x4000 # TODO: this needs to be clarified (ronf, dhaldane, pullin)
+        
+        lastLeftDelta = 1-sum(gaitConfig.leftDeltas) #TODO: change this to explicit entry, with a normalization here
+        lastRightDelta = 1-sum(gaitConfig.rightDeltas)
+        
+        temp = [int(periodLeft), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                int(periodRight), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
+        
+        self.tx( 0, command.SET_VEL_PROFILE, pack('12h', *temp))
+        time.sleep(0.1)
+    
+    #TODO: This may be a vestigial function. Check versus firmware.
+    def setMotorMode(self, motorgains, retries = 8 ):
         tries = 1
         self.motorGains = motorgains
         self.motor_gains_set = False
         while not(self.motor_gains_set) and (tries <= retries):
             self.clAnnounce()
-            print "Setting motor gains...   ",tries,"/8"
+            print "Setting motor mode...   ",tries,"/8"
             self.tx( 0, command.SET_MOTOR_MODE, pack('10h',*gains))
             tries = tries + 1
             time.sleep(0.1)
@@ -147,17 +154,17 @@ class Velociroach:
         dlStart = time.time()
         shared.last_packet_time = dlStart
         #bytesIn = 0
-        while self.imudata.count([]) > 0:
+        while self.telemtryData.count([]) > 0:
             time.sleep(0.02)
-            dlProgress(self.numSamples - self.imudata.count([]) , self.numSamples)
+            dlProgress(self.numSamples - self.telemtryData.count([]) , self.numSamples)
             if (time.time() - shared.last_packet_time) > timeout:
                 print ""
                 #Terminal message about missed packets
                 self.clAnnounce()
                 print "Readback timeout exceeded"
-                print "Missed", self.imudata.count([]), "packets."
+                print "Missed", self.telemtryData.count([]), "packets."
                 #print "Didn't get packets:"
-                #for index,item in enumerate(self.imudata):
+                #for index,item in enumerate(self.telemtryData):
                 #    if item == []:
                 #        print "#",index+1,
                 print "" 
@@ -165,7 +172,7 @@ class Velociroach:
                 # Retry telem download            
                 if retry == True:
                     raw_input("Press Enter to restart telemetry readback ...")
-                    self.imudata = [ [] ] * self.numSamples
+                    self.telemtryData = [ [] ] * self.numSamples
                     self.clAnnounce()
                     print "Started telemetry download"
                     dlStart = time.time()
@@ -177,9 +184,9 @@ class Velociroach:
         dlEnd = time.time()
         dlTime = dlEnd - dlStart
         #Final update to download progress bar to make it show 100%
-        dlProgress(self.numSamples-self.imudata.count([]) , self.numSamples)
+        dlProgress(self.numSamples-self.telemtryData.count([]) , self.numSamples)
         #totBytes = 52*self.numSamples
-        totBytes = 52*(self.numSamples - self.imudata.count([]))
+        totBytes = 52*(self.numSamples - self.telemtryData.count([]))
         datarate = totBytes / dlTime / 1000.0
         print '\n'
         #self.clAnnounce()
@@ -191,19 +198,19 @@ class Velociroach:
         self.VERBOSE = True
 
         print ""
-        self.saveImudata()
+        self.saveTelemetryData()
         #Done with flash download and save
 
-    def saveImudata(self):
+    def saveTelemetryData(self):
         self.findFileName()
         self.writeFileHeader()
         fileout = open(self.dataFileName, 'a')
-        np.savetxt(fileout , np.array(self.imudata), self.telemFormatString, delimiter = ',')
+        np.savetxt(fileout , np.array(self.telemtryData), self.telemFormatString, delimiter = ',')
         fileout.close()
         self.clAnnounce()
         print "Telemetry data saved to", self.dataFileName
         
-    def writeFileHeader(self, params, manParams):
+    def writeFileHeader(self, gaitConfig):
         fileout = open(self.dataFileName,'w')
         #write out parameters in format which can be imported to Excel
         today = time.localtime()
@@ -211,25 +218,21 @@ class Velociroach:
         date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
         fileout.write('%  Data file recorded ' + date + '\n')
 
-        if manParams.useFlag == True:
-            fileout.write('%  Stride Frequency         = ' +repr(manParams.strideFreq) + '\n')
-            fileout.write('%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '\n')
-            fileout.write('%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '\n')
-        else:    
-            fileout.write('%  Right Stride Frequency         = ' +repr(params.rightFreq) + '\n')
-            fileout.write('%  Left Stride Frequency         = ' +repr(params.leftFreq) + '\n')
-            fileout.write('%  Phase (Fractional)         = ' +repr(params.phase) + '\n')
-
+        fileout.write('%  Stride Frequency         = ' +repr( [ gaitConfig.leftFreq, gaitConfig.leftFreq]) + '\n')
+        fileout.write('%  Lead In /Lead Out        = ' + '\n')
+        fileout.write('%  Deltas (Fractional)      = ' + repr(gaitConfig.leftDeltas) + ',' + repr(gaitConfig.rightDeltas) + '\n')
+        fileout.write('%  Phase                    = ' + repr(gaitConfig.phase) + '\n')
+            
         fileout.write('%  Experiment.py \n')
-        fileout.write('%  Motor Gains    = ' + repr(params.motorgains) + '\n')
+        fileout.write('%  Motor Gains    = ' + repr(gaitConfig.motorgains) + '\n')
         fileout.write('% Columns: \n')
         # order for wiring on RF Turner
         fileout.write('% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt\n')
         fileout.close()
 
-    def setupImudata(self, numSamples = None, runtime = None):
+    def setupTelemetryData(self, numSamples = None, runtime = None):
         ''' This is NOT current for Velociroach! '''
-        #TODO : update for velociroach
+        #TODO : update for Velociroach
         
         # Take the longer number, between numSamples and runTime
         nrun = int(self.telemSampleFreq * runtime / 1000.0)
@@ -237,30 +240,38 @@ class Velociroach:
         self.numSamples = max([ nrun , numSamples ])
         
         #allocate an array to write the downloaded telemetry data into
-        self.imudata = [ [] ] * self.numSamples
+        self.telemtryData = [ [] ] * self.numSamples
         self.clAnnounce()
         print "Telemetry samples to save: ",self.numSamples
     
-    
-    # execute move command
-    def proceed(self, params):
-        thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
-        self.tx(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
-        print "Throttle = ",params.throttle,"duration =", params.duration
-        time.sleep(0.01)
-
-
     def startTelemetrySave(self, numSamples):
         self.clAnnounce()
         print "Started telemetry save of", self.numSamples," samples".
         self.tx(0, command.START_TELEMETRY, pack('L',self.numSamples))
 
-
+    def setMotorGains(self, gains, retries = 8):
+        tries = 1
+        self.motorGains = gains
+        while not(self.motor_gains_set) and (tries <= retries):
+            self.clAnnounce()
+            print "Setting motor gains...   ",tries,"/8"
+            self.tx( 0, command.SET_PID_GAINS, pack('10h',*gains))
+            tries = tries + 1
+            time.sleep(0.3)
+            
     def setGait(self, gaitConfig):
+        self.clAnnounce()
+        print " --- Setting complete gait config --- "
+        
+        self.setPhase(gaitConfig.phase)
+        self.SetMotorGains(gaitConfig.motorGains)
+        self.setVelProfile(gaitConfig) #whole object is passed in, due to several references
+        
         
         
         
 ########## Helper functions #################
+#TODO: find a home for these? Possibly in BaseStation class (pullin, abuchan)
 
 def setupSerial(COMPORT , BAUDRATE , timeout = 3, rtscts = 0):
     print "Setting up serial ..."

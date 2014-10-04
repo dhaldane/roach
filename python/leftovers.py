@@ -262,4 +262,9 @@ def getVelProfile(params):
     #params.intervals = intervals
     #params.vel = vel
         
-   
+# execute move command
+def proceed(self, params):
+    thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
+    self.tx(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
+    print "Throttle = ",params.throttle,"duration =", params.duration
+    time.sleep(0.01)  

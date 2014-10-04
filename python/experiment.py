@@ -14,10 +14,11 @@ import shared
 
 from velociroach import *
 
-###### Operation Flags ####
+###### Operation Flags ######
 RESET_R1 = True  
 SAVE_DATA_R1 = False 
 
+####### Wait at exit? #######
 EXIT_WAIT   = False
 
 
@@ -39,30 +40,35 @@ def main():
     # Send robot a WHO_AM_I command, verify communications
     R1.queryRobot()
     
+    #Verify all robots can be queried
+    verifyAllQueried()  # exits on failure
+    
     # Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
 
-    simpleGait = GaitConfig(motorgains, duration=500, rightFreq=5, leftFreq=5, telemetry=True, repeat=False)
-    simpleGait.phase = PHASE_180_DEG
-    simpleGait.deltasLeft = [0.25, 0.25, 0.25]
-    simpleGait.deltasRight = [0.25, 0.25, 0.25]
-    #simpleGait.deltasTime  = [0.25, 0.25, 0.25] # Not current supported by firmware; time deltas are always exactly [0.25, 0.25, 0.25, 0.25]
+    simpleAltTripod = GaitConfig(motorgains, rightFreq=5, leftFreq=5) # Parameters can be passed into object upon construction, as done here.
+    simpleAltTripod.phase = PHASE_180_DEG                             # Or set individually, as here
+    simpleAltTripod.deltasLeft = [0.25, 0.25, 0.25]
+    simpleAltTripod.deltasRight = [0.25, 0.25, 0.25]
+    #simpleAltTripod.deltasTime  = [0.25, 0.25, 0.25] # Not current supported by firmware; time deltas are always exactly [0.25, 0.25, 0.25, 0.25]
     
     # Configure intra-stride control
-    R1.setGait(simpleGait)
+    R1.setGait(simpleAltTripod)
 
     # example , 0.1s lead in + 2s run + 0.1s lead out
-    experiment_runtime = 2200 #ms
+    EXPERIMENT_RUN_TIME     = 2000 #ms
+    EXPERIMENT_LEADIN_TIME  = 100  #ms
+    EXPERIMENT_LEADOUT_TIME = 100  #ms
     
     # Some preparation is needed to cleanly save telemetry data
     if SAVE_DATA_R1:
-        #This needs to be done to prepare the .imudata variables in each robot object
-        R1.setupImudata(experiment_runtime)
+        #This needs to be done to prepare the .telemtryData variables in each robot object
+        R1.setupTelemetryData(experiment_runtime)
         R1.eraseFlashMem()
         
-    # Pause and wait to start run, including leadin time
+    # Pause and wait to start run, including lead-in time
     print ""
     print "  ***************************"
     print "  *******    READY    *******"
@@ -75,14 +81,17 @@ def main():
         R1.startTelemetrySave()
     
     # Sleep for a lead-in time before any motion commands
-    time.sleep(0.1)
+    time.sleep(EXPERIMENT_LEADIN_TIME)
     
-    #### Motion is initiated here! ####
-    # TODO: how to incite motion on a velociroach?
-    #### End of motion commands   ####
+    ######## Motion is initiated here! ########
+    R1.startTimedRun( EXPERIMENT_RUN_TIME )
+    time.sleep(EXPERIMENT_RUN_TIME)
+    ######## End of motion commands   ########
+    
+    # Sleep for a lead-out time after any motion
+    time.sleep(EXPERIMENT_LEADOUT_TIME)
     
     if SAVE_DATA1:
-        time.sleep(experiment_runtime)
         time.sleep(0.25) #and a little extra, for system settle
         raw_input("Press Enter to start telemetry read-back ...")
         R1.downloadTelemetry()
@@ -110,7 +119,7 @@ if __name__ == '__main__':
         shared.ser.close()
     except Exception as args:
         print "\nGeneral exception:",args
-        print "Attemping to exit cleanly..."
+        print "Attempting to exit cleanly..."
         shared.xb.halt()
         shared.ser.close()
         sys.exit()
