@@ -11,28 +11,27 @@ from xbee import XBee
 from math import ceil,floor
 import numpy as np
 
+# TODO: check with firmware if this value is actually correct
+PHASE_180_DEG = 0x8000
 
-class gaitParams:
-    rightFreq = []
-    leftFreq = []
-    phase = 0x8000 # default 180 deg
-    strideFreq = 5
-    repeat = []
-    
-    deltasLeft = [0.25, 0.25, 0.25]
-    deltasRight = [0.25, 0.25, 0.26]
-    
+class GaitConfig:
+    motorgains = None
+    duration = None
+    rightFreq = None
+    leftFreq = None
+    phase = None
+    repeat = None
+    deltasLeft = None
+    deltasRight = None
     def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, repeat):
         self.motorgains = motorgains
         self.duration = duration
         self.rightFreq = rightFreq
         self.leftFreq = leftFreq
         self.phase = phase
-        self.telemetry = telemetry
         self.repeat = repeat
-
-
-
+        
+        
 class Velociroach:
     motor_gains_set = False
     robot_queried = False
@@ -195,33 +194,6 @@ class Velociroach:
         self.saveImudata()
         #Done with flash download and save
 
-    ######TODO : sort out this function
-    def flashReadback(numSamples, params, manParams):
-        delay = 0.006
-        # raw_input("Press any key to start readback of %d packets ..." % numSamples)
-        print "started readback"
-        shared.imudata = [ [] ] * numSamples  # reset imudata structure
-        shared.pkts = 0  # reset packet count???
-        xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
-        # While waiting, write parameters to start of file
-        print shared.dataFileName
-        writeFileHeader(shared.dataFileName, params, manParams)     
-        time.sleep(delay*numSamples + 1)
-        # while shared.pkts != numSamples:
-        #     print "Retry"
-        #     shared.imudata = [ [] ] * numSamples
-        #     shared.pkts = 0
-        #     xb_send(0, command.FLASH_READBACK, pack('=h',numSamples))
-        #     time.sleep(delay*numSamples + 3)
-        #     if shared.pkts > numSamples:
-        #         print "too many packets"
-        #         break
-        raw_input("\nReadback Done?")
-        fileout = open(shared.dataFileName, 'a')
-        np.savetxt(fileout , np.array([e for e in shared.imudata if len(e)]), '%d', delimiter = ',') # Write non-empty lists in imudata to file
-        fileout.close()
-        print "data saved to ",shared.dataFileName
-
     def saveImudata(self):
         self.findFileName()
         self.writeFileHeader()
@@ -255,140 +227,39 @@ class Velociroach:
         fileout.write('% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt\n')
         fileout.close()
 
-    
-    
+    def setupImudata(self, numSamples = None, runtime = None):
+        ''' This is NOT current for Velociroach! '''
+        #TODO : update for velociroach
         
+        # Take the longer number, between numSamples and runTime
+        nrun = int(self.telemSampleFreq * runtime / 1000.0)
+     
+        self.numSamples = max([ nrun , numSamples ])
         
-        
-class hallParams:
-    motorgains = []
-    duration = []
-    rightFreq = []
-    leftFreq = []
-    phase = []
-    telemetry = []
-    repeat = []
-    def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat):
-        self.motorgains = motorgains
-        self.duration = duration
-        self.rightFreq = rightFreq
-        self.leftFreq = leftFreq
-        self.phase = phase
-        self.telemetry = telemetry
-        self.repeat = repeat
-
-class manueverParams:
-    leadIn      = []
-    leadOut     = []
-    strideFreq  = []
-    phase       = []
-    useFlag     = []
-    deltas      = []
-    def __init__(self, leadIn, leadOut, strideFreq, phase, useFlag, deltas):
-        self.leadIn =  leadIn     
-        self.leadOut =  leadOut    
-        self.strideFreq =  strideFreq 
-        self.phase =  phase 
-        self.useFlag =  useFlag    
-        self.deltas =  deltas     
-        
-
-
-
-
-
-
-
-def runManeuver(params, manParams):
-    p = 1.0/manParams.strideFreq
-    temp = [100,0,0,0,0,0,100,0,0,0,0,0]
-    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
-    time.sleep(0.01)
-    xb_send(0, command.START_TIMED_RUN, pack('h',int(1000*p*(manParams.leadOut+manParams.leadIn+1))))
-    time.sleep(0.01)
-    setVelProfile(params,manParams,False)
-    time.sleep(p*(manParams.leadIn - 0.5))
-    setVelProfile(params,manParams,True)
-    time.sleep(manParams.leadOut * p)
-
-
-# rVel = 1043*vel + 80*turn_rate
-# lVel = 1043*vel - 80*turn_rate
-    
-#get velocity profile
-def getVelProfile(params):
-
-    sum = 0
-    print 'set points in degrees e.g. 60,90,180,360:',
-    x = raw_input()
-    if len(x):
-        temp = map(int,x.split(','))
-        params.delta[0] = (temp[0]*42)/360
-        sum = params.delta[0]
-        for i in range(1,3):
-            params.delta[i] = ((temp[i]-temp[i-1])*42)/360
-            sum = sum + params.delta[i]
-        params.delta[3]=42-sum
-    else:
-        print 'not enough delta values'
-        
-    print 'current duration (ms)',params.duration,' new value:',
-    params.duration = int(raw_input())
-    print 'enter % time of each segment <csv>',
-    x = raw_input()
-    if len(x):
-        params.intervals = map(int,x.split(','))
-        sum = 0
-        for i in range(0,4):
-            params.intervals[i] = params.duration*params.intervals[i]/100  # interval in ms
-            sum = sum + params.intervals[i]
-            params.vel[i] = (params.delta[i] <<8)/params.intervals[i]
-        #adjust to total duration for rounding
-        params.intervals[3] = params.intervals[3] + params.duration - sum
-    else:
-        print 'not enough values'
- #  print 'intervals (ms)',intervals
-    params.duration = params.duration -1 # end on current segment
-    
-    #assign locally calculated values to parameter object:
-    #params.delta = delta
-    #params.duration = duration
-    #params.intervals = intervals
-    #params.vel = vel
-        
-   
-
-
-
-# execute move command
-def proceed(params):
-    thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
-    xb_send(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
-    print "Throttle = ",params.throttle,"duration =", params.duration
-    time.sleep(0.1)
-
-
-        
-
-
-
-def startTelemetrySave(numSamples):
-    temp=[numSamples]
-    print 'temp =',temp,'\n'
-    xb_send(0, command.START_TELEMETRY, pack('h',*temp))
-
-def startTelemetrySave(self):
+        #allocate an array to write the downloaded telemetry data into
+        self.imudata = [ [] ] * self.numSamples
         self.clAnnounce()
-        print "Started telemtry save"
-        self.tx( 0, command.SPECIAL_TELEMETRY, pack('L',self.numSamples))
-                             
-                             
-                             
-               
+        print "Telemetry samples to save: ",self.numSamples
+    
+    
+    # execute move command
+    def proceed(self, params):
+        thrust = [params.throttle[0], params.duration, params.throttle[1], params.duration, 0]
+        self.tx(0, command.SET_THRUST_CLOSED_LOOP, pack('5h',*thrust))
+        print "Throttle = ",params.throttle,"duration =", params.duration
+        time.sleep(0.01)
 
-               
-                             
-                             
+
+    def startTelemetrySave(self, numSamples):
+        self.clAnnounce()
+        print "Started telemetry save of", self.numSamples," samples".
+        self.tx(0, command.START_TELEMETRY, pack('L',self.numSamples))
+
+
+    def setGait(self, gaitConfig):
+        
+        
+        
 ########## Helper functions #################
 
 def setupSerial(COMPORT , BAUDRATE , timeout = 3, rtscts = 0):
@@ -406,9 +277,13 @@ def setupSerial(COMPORT , BAUDRATE , timeout = 3, rtscts = 0):
     return XBee(ser, callback = xbee_received)
     
     
-def xb_safe_exit():
+def xb_safe_exit(xb):
     print "Halting xb"
-    shared.xb.halt()
+    if xb is not None:
+        xb.halt()
+    else:
+        shared.xb.halt()
+        
     print "Closing serial"
     shared.ser.close()
     print "Exiting..."
@@ -421,20 +296,6 @@ def verifyAllMotorGainsSet():
     for r in shared.ROBOTS:
         if not(r.motor_gains_set):
             print "CRITICAL : Could not SET MOTOR GAINS on robot 0x%02X" % r.DEST_ADDR_int
-            xb_safe_exit()
-
-def verifyAllSteeringGainsSet():
-    #Verify all robots have motor gains set
-    for r in shared.ROBOTS:
-        if not(r.steering_gains_set):
-            print "CRITICAL : Could not SET STEERING GAINS on robot 0x%02X" % r.DEST_ADDR_int
-            xb_safe_exit()
-            
-def verifyAllSteeringRateSet():
-    #Verify all robots have motor gains set
-    for r in shared.ROBOTS:
-        if not(r.steering_gains_set):
-            print "CRITICAL : Could not SET STEERING GAINS on robot 0x%02X" % r.DEST_ADDR_int
             xb_safe_exit()
             
 def verifyAllTailGainsSet():

@@ -187,3 +187,79 @@ getch = _Getch()
 
 def getDstAddrString():
     return hex(256* ord(shared.DEST_ADDR[0])+ ord(shared.DEST_ADDR[1])) 
+    
+    
+class manueverParams:
+    leadIn      = []
+    leadOut     = []
+    strideFreq  = []
+    phase       = []
+    useFlag     = []
+    deltas      = []
+    def __init__(self, leadIn, leadOut, strideFreq, phase, useFlag, deltas):
+        self.leadIn =  leadIn     
+        self.leadOut =  leadOut    
+        self.strideFreq =  strideFreq 
+        self.phase =  phase 
+        self.useFlag =  useFlag    
+        self.deltas =  deltas     
+        
+
+def runManeuver(params, manParams):
+    p = 1.0/manParams.strideFreq
+    temp = [100,0,0,0,0,0,100,0,0,0,0,0]
+    xb_send(0,command.SET_VEL_PROFILE, pack('12h',*temp))
+    time.sleep(0.01)
+    xb_send(0, command.START_TIMED_RUN, pack('h',int(1000*p*(manParams.leadOut+manParams.leadIn+1))))
+    time.sleep(0.01)
+    setVelProfile(params,manParams,False)
+    time.sleep(p*(manParams.leadIn - 0.5))
+    setVelProfile(params,manParams,True)
+    time.sleep(manParams.leadOut * p)
+
+    
+# rVel = 1043*vel + 80*turn_rate
+# lVel = 1043*vel - 80*turn_rate
+
+# interactively get velocity profile from user
+def getVelProfile(params):
+
+    sum = 0
+    print 'set points in degrees e.g. 60,90,180,360:',
+    x = raw_input()
+    if len(x):
+        temp = map(int,x.split(','))
+        params.delta[0] = (temp[0]*42)/360
+        sum = params.delta[0]
+        for i in range(1,3):
+            params.delta[i] = ((temp[i]-temp[i-1])*42)/360
+            sum = sum + params.delta[i]
+        params.delta[3]=42-sum
+    else:
+        print 'not enough delta values'
+        
+    print 'current duration (ms)',params.duration,' new value:',
+    params.duration = int(raw_input())
+    print 'enter % time of each segment <csv>',
+    x = raw_input()
+    if len(x):
+        params.intervals = map(int,x.split(','))
+        sum = 0
+        for i in range(0,4):
+            params.intervals[i] = params.duration*params.intervals[i]/100  # interval in ms
+            sum = sum + params.intervals[i]
+            params.vel[i] = (params.delta[i] <<8)/params.intervals[i]
+        #adjust to total duration for rounding
+        params.intervals[3] = params.intervals[3] + params.duration - sum
+    else:
+        print 'not enough values'
+ #  print 'intervals (ms)',intervals
+    params.duration = params.duration -1 # end on current segment
+    
+    #assign locally calculated values to parameter object:
+    #params.delta = delta
+    #params.duration = duration
+    #params.intervals = intervals
+    #params.vel = vel
+        
+   
