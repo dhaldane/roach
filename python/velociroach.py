@@ -6,7 +6,7 @@ from callbackFunc import xbee_received
 import datetime
 import serial
 import shared
-from struct import pack
+from struct import pack,unpack
 from xbee import XBee
 from math import ceil,floor
 import numpy as np
@@ -23,8 +23,12 @@ class GaitConfig:
     repeat = None
     deltasLeft = None
     deltasRight = None
-    def __init__(self, motorgains, duration, rightFreq, leftFreq, phase, repeat):
-        self.motorgains = motorgains
+    def __init__(self, motorgains = None, duration = None, rightFreq = None, leftFreq = None, phase = None, repeat = None):
+        if motorgains == None:
+            self.motorgains = [0,0,0,0,0 , 0,0,0,0,0]
+        else:
+            self.motorgains = motorgains
+        
         self.duration = duration
         self.rightFreq = rightFreq
         self.leftFreq = leftFreq
@@ -36,15 +40,17 @@ class Velociroach:
     motor_gains_set = False
     robot_queried = False
     flash_erased = False
-    motorGains = [0,0,0,0,0, 0,0,0,0,0]
-    angRateDeg = 0;
-    angRate = 0;
+    
+    currentGait = GaitConfig()
+
     dataFileName = ''
     telemtryData = [ [] ]
     numSamples = 0
     telemSampleFreq = 1000
     VERBOSE = True
     telemFormatString = '%d' # single type forces all data to be saved in this type
+    SAVE_DATA = False
+    RESET = False
 
     def __init__(self, address, xb):
             self.DEST_ADDR = address
@@ -92,7 +98,7 @@ class Velociroach:
         
     def setPhase(self, phase):
         self.clAnnounce()
-        print "Setting phase ... "
+        print "Setting phase to 0x%04X " % phase
         self.tx( 0, command.SET_PHASE, pack('l', phase))
         time.sleep(0.05)        
     
@@ -122,11 +128,13 @@ class Velociroach:
         
         deltaConv = 0x4000 # TODO: this needs to be clarified (ronf, dhaldane, pullin)
         
-        lastLeftDelta = 1-sum(gaitConfig.leftDeltas) #TODO: change this to explicit entry, with a normalization here
-        lastRightDelta = 1-sum(gaitConfig.rightDeltas)
+        lastLeftDelta = 1-sum(gaitConfig.deltasLeft) #TODO: change this to explicit entry, with a normalization here
+        lastRightDelta = 1-sum(gaitConfig.deltasRight)
         
-        temp = [int(periodLeft), int(delta[0]*deltaConv), int(delta[1]*deltaConv), int(delta[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
-                int(periodRight), int(delta[3]*deltaConv), int(delta[4]*deltaConv), int(delta[5]*deltaConv), int(lastRightDelta*deltaConv), 1]
+        temp = [int(periodLeft), int(gaitConfig.deltasLeft[0]*deltaConv), int(gaitConfig.deltasLeft[1]*deltaConv),
+                int(gaitConfig.deltasLeft[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                int(periodRight), int(gaitConfig.deltasRight[0]*deltaConv), int(gaitConfig.deltasRight[1]*deltaConv),
+                int(gaitConfig.deltasRight[2]*deltaConv), int(lastRightDelta*deltaConv), 1]
         
         self.tx( 0, command.SET_VEL_PROFILE, pack('12h', *temp))
         time.sleep(0.1)
@@ -230,14 +238,24 @@ class Velociroach:
         fileout.write('% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt\n')
         fileout.close()
 
-    def setupTelemetryData(self, numSamples = None, runtime = None):
+    def setupTelemetryDataTime(self, runtime):
         ''' This is NOT current for Velociroach! '''
         #TODO : update for Velociroach
         
         # Take the longer number, between numSamples and runTime
         nrun = int(self.telemSampleFreq * runtime / 1000.0)
+        self.numSamples = nrun
+        
+        #allocate an array to write the downloaded telemetry data into
+        self.telemtryData = [ [] ] * self.numSamples
+        self.clAnnounce()
+        print "Telemetry samples to save: ",self.numSamples
+        
+    def setupTelemetryDataNum(self, numSamples):
+        ''' This is NOT current for Velociroach! '''
+        #TODO : update for Velociroach
      
-        self.numSamples = max([ nrun , numSamples ])
+        self.numSamples = numSamples
         
         #allocate an array to write the downloaded telemetry data into
         self.telemtryData = [ [] ] * self.numSamples
@@ -246,7 +264,7 @@ class Velociroach:
     
     def startTelemetrySave(self, numSamples):
         self.clAnnounce()
-        print "Started telemetry save of", self.numSamples," samples".
+        print "Started telemetry save of", self.numSamples," samples."
         self.tx(0, command.START_TELEMETRY, pack('L',self.numSamples))
 
     def setMotorGains(self, gains, retries = 8):
@@ -264,7 +282,7 @@ class Velociroach:
         print " --- Setting complete gait config --- "
         
         self.setPhase(gaitConfig.phase)
-        self.SetMotorGains(gaitConfig.motorGains)
+        self.setMotorGains(gaitConfig.motorgains)
         self.setVelProfile(gaitConfig) #whole object is passed in, due to several references
         
         
@@ -307,19 +325,19 @@ def verifyAllMotorGainsSet():
     for r in shared.ROBOTS:
         if not(r.motor_gains_set):
             print "CRITICAL : Could not SET MOTOR GAINS on robot 0x%02X" % r.DEST_ADDR_int
-            xb_safe_exit()
+            xb_safe_exit(shared.xb)
             
 def verifyAllTailGainsSet():
     #Verify all robots have motor gains set
     for r in shared.ROBOTS:
         if not(r.tail_gains_set):
             print "CRITICAL : Could not SET TAIL GAINS on robot 0x%02X" % r.DEST_ADDR_int
-            xb_safe_exit()
+            xb_safe_exit(shared.xb)
             
 def verifyAllQueried():            
     for r in shared.ROBOTS:
         if not(r.robot_queried):
             print "CRITICAL : Could not query robot 0x%02X" % r.DEST_ADDR_int
-            xb_safe_exit()
+            xb_safe_exit(shared.xb)
 
     

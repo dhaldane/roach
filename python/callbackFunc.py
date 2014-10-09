@@ -29,7 +29,7 @@ pktFormat = { \
                
 #XBee callback function, called every time a packet is recieved
 def xbee_received(packet):
-     rf_data = packet.get('rf_data')
+    rf_data = packet.get('rf_data')
     #rssi = ord(packet.get('rssi'))
     (src_addr, ) = unpack('>H', packet.get('source_addr'))
     #id = packet.get('id')
@@ -126,11 +126,10 @@ def xbee_received(packet):
             
         # WHO_AM_I
         elif (type == command.WHO_AM_I):
-            #print "whoami:",status, hex(type), data
-            print "whoami:",data
-            shared.robotQueried = True
-        else:    
-            pass
+            print "query : ",data
+            for r in shared.ROBOTS:
+                if r.DEST_ADDR_int == src_addr:
+                    r.robot_queried = True 
     
     except Exception as args:
         print "\nGeneral exception from callbackfunc:",args

@@ -78,7 +78,7 @@ int main() {
 
     // Need delay for encoders to be ready
     delay_ms(100);
-    amsEncoderSetup();
+    //amsEncoderSetup();
     mpuSetup();
     tiHSetup();
     dfmemSetup();

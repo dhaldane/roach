@@ -8,37 +8,36 @@ The main function will send all the setup parameters to the robots, execute defi
 
 """
 from lib import command
-import time,sys,os
+import time,sys,os,traceback
 import serial
 import shared
 
 from velociroach import *
 
-###### Operation Flags ######
-RESET_R1 = True  
-SAVE_DATA_R1 = False 
-
 ####### Wait at exit? #######
 EXIT_WAIT   = False
-
 
 def main():    
     xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
     
-    R1 = Velociroach('\x21\x02', xb)
+    R1 = Velociroach('\x20\x52', xb)
+    R1.SAVE_DATA = False    #Not currently working VR, since flash erase sends no 'finished' packet
+    #R1.RESET = False       #current roach code does not support software reset
     
-    shared.ROBOTS = [R1] #This is necessary so callbackfunc can reference robots
+    shared.ROBOTS.append(R1) #This is necessary so callbackfunc can reference robots
     shared.xb = xb           #This is necessary so callbackfunc can halt before exit
 
     # Send resets
-    if RESET_R1:
-        R1.reset()
-        time.sleep(0.35)
+    for r in shared.ROBOTS:
+        if r.RESET:
+            r.reset()
+            time.sleep(0.35)
     # Repeat this for other robots
     # TODO: move reset / telem flags inside robot class? (pullin)
     
     # Send robot a WHO_AM_I command, verify communications
-    R1.queryRobot()
+    for r in shared.ROBOTS:
+        r.query(retries = 3)
     
     #Verify all robots can be queried
     verifyAllQueried()  # exits on failure
@@ -58,15 +57,16 @@ def main():
     R1.setGait(simpleAltTripod)
 
     # example , 0.1s lead in + 2s run + 0.1s lead out
-    EXPERIMENT_RUN_TIME     = 2000 #ms
-    EXPERIMENT_LEADIN_TIME  = 100  #ms
-    EXPERIMENT_LEADOUT_TIME = 100  #ms
+    EXPERIMENT_RUN_TIME_MS     = 2000 #ms
+    EXPERIMENT_LEADIN_TIME_MS  = 100  #ms
+    EXPERIMENT_LEADOUT_TIME_MS = 100  #ms
     
     # Some preparation is needed to cleanly save telemetry data
-    if SAVE_DATA_R1:
-        #This needs to be done to prepare the .telemtryData variables in each robot object
-        R1.setupTelemetryData(experiment_runtime)
-        R1.eraseFlashMem()
+    for r in shared.ROBOTS:
+        if r.SAVE_DATA:
+            #This needs to be done to prepare the .telemtryData variables in each robot object
+            r.setupTelemetryDataTime(EXPERIMENT_RUN_TIME_MS / 1000.0)   #argument to time.sleep is in SECONDS
+            r.eraseFlashMem()
         
     # Pause and wait to start run, including lead-in time
     print ""
@@ -77,24 +77,26 @@ def main():
     print ""
 
     # Initiate telemetry recording; the robot will begin recording immediately when cmd is received.
-    if SAVE_DATA_R1:
-        R1.startTelemetrySave()
+    for r in shared.ROBOTS:
+        if r.SAVE_DATA:
+            r.startTelemetrySave()
     
     # Sleep for a lead-in time before any motion commands
-    time.sleep(EXPERIMENT_LEADIN_TIME)
+    time.sleep(EXPERIMENT_LEADIN_TIME_MS / 1000.0)
     
     ######## Motion is initiated here! ########
-    R1.startTimedRun( EXPERIMENT_RUN_TIME )
-    time.sleep(EXPERIMENT_RUN_TIME)
+    R1.startTimedRun( EXPERIMENT_RUN_TIME_MS )
+    time.sleep(EXPERIMENT_RUN_TIME_MS / 1000.0)  #argument to time.sleep is in SECONDS
     ######## End of motion commands   ########
     
     # Sleep for a lead-out time after any motion
-    time.sleep(EXPERIMENT_LEADOUT_TIME)
+    time.sleep(EXPERIMENT_LEADOUT_TIME_MS / 1000.0) 
     
-    if SAVE_DATA1:
-        time.sleep(0.25) #and a little extra, for system settle
-        raw_input("Press Enter to start telemetry read-back ...")
-        R1.downloadTelemetry()
+    for r in shared.ROBOTS:
+        if r.SAVE_DATA:
+            time.sleep(0.25) #and a little extra, for system settle
+            raw_input("Press Enter to start telemetry read-back ...")
+            r.downloadTelemetry()
     
     if EXIT_WAIT:  #Pause for a Ctrl + C , if desired
         while True:
@@ -119,6 +121,9 @@ if __name__ == '__main__':
         shared.ser.close()
     except Exception as args:
         print "\nGeneral exception:",args
+        print "\n    ******    TRACEBACK    ******    "
+        traceback.print_exc()
+        print "    *****************************    \n"
         print "Attempting to exit cleanly..."
         shared.xb.halt()
         shared.ser.close()
