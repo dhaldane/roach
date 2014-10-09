@@ -82,7 +82,9 @@ class Velociroach:
             self.tx( 0,  command.WHO_AM_I, "Robot Echo") #sent text is unimportant
             tries = tries + 1
             time.sleep(0.1)   
-        
+    
+    #TODO: getting flash erase to work is critical to function testing (pullin)    
+    #existing VR firmware does not send a packet when the erase is done, so this will hang and retry.
     def eraseFlashMem(self, timeout = 8):
         eraseStartTime = time.time()
         self.tx( 0, command.ERASE_SECTORS, pack('L',self.numSamples))

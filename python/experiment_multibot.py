@@ -22,6 +22,7 @@ def main():
     
     R1 = Velociroach('\x20\x52', xb)
     R1.SAVE_DATA = False    #Not currently working VR, since flash erase sends no 'finished' packet
+                            #TODO: getting flash erase to work is critical to function testing (pullin)
     #R1.RESET = False       #current roach code does not support software reset
     
     shared.ROBOTS.append(R1) #This is necessary so callbackfunc can reference robots
