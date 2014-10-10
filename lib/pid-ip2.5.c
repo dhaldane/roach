@@ -353,7 +353,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
         }
 
         if(pidObjs[0].onoff) {
-            telemGetPID();
+            //telemGetPID();
+            telemSaveNow();
 
             // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
             // if(uart_tx_packet != NULL) {
