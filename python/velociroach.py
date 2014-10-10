@@ -123,7 +123,7 @@ class Velociroach:
         
     def setVelProfile(self, gaitConfig):
         self.clAnnounce()
-        print "Setting stride velocity profile ... "
+        print "Setting stride velocity profile to: "
         
         periodLeft = 1000.0 / gaitConfig.leftFreq
         periodRight = 1000.0 / gaitConfig.rightFreq
@@ -137,6 +137,9 @@ class Velociroach:
                 int(gaitConfig.deltasLeft[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
                 int(periodRight), int(gaitConfig.deltasRight[0]*deltaConv), int(gaitConfig.deltasRight[1]*deltaConv),
                 int(gaitConfig.deltasRight[2]*deltaConv), int(lastRightDelta*deltaConv), 1]
+        
+        self.clAnnounce()
+        print "     ",temp
         
         self.tx( 0, command.SET_VEL_PROFILE, pack('12h', *temp))
         time.sleep(0.1)
@@ -220,7 +223,7 @@ class Velociroach:
         self.clAnnounce()
         print "Telemetry data saved to", self.dataFileName
         
-    def writeFileHeader(self, gaitConfig):
+    def writeFileHeader(self):
         fileout = open(self.dataFileName,'w')
         #write out parameters in format which can be imported to Excel
         today = time.localtime()
@@ -228,13 +231,13 @@ class Velociroach:
         date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
         fileout.write('%  Data file recorded ' + date + '\n')
 
-        fileout.write('%  Stride Frequency         = ' +repr( [ gaitConfig.leftFreq, gaitConfig.leftFreq]) + '\n')
+        fileout.write('%  Stride Frequency         = ' +repr( [ self.currentGait.leftFreq, self.currentGait.leftFreq]) + '\n')
         fileout.write('%  Lead In /Lead Out        = ' + '\n')
-        fileout.write('%  Deltas (Fractional)      = ' + repr(gaitConfig.leftDeltas) + ',' + repr(gaitConfig.rightDeltas) + '\n')
-        fileout.write('%  Phase                    = ' + repr(gaitConfig.phase) + '\n')
+        fileout.write('%  Deltas (Fractional)      = ' + repr(self.currentGait.deltasLeft) + ',' + repr(self.currentGait.deltasRight) + '\n')
+        fileout.write('%  Phase                    = ' + repr(self.currentGait.phase) + '\n')
             
         fileout.write('%  Experiment.py \n')
-        fileout.write('%  Motor Gains    = ' + repr(gaitConfig.motorgains) + '\n')
+        fileout.write('%  Motor Gains    = ' + repr(self.currentGait.motorgains) + '\n')
         fileout.write('% Columns: \n')
         # order for wiring on RF Turner
         fileout.write('% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt\n')
@@ -264,7 +267,7 @@ class Velociroach:
         self.clAnnounce()
         print "Telemetry samples to save: ",self.numSamples
     
-    def startTelemetrySave(self, numSamples):
+    def startTelemetrySave(self):
         self.clAnnounce()
         print "Started telemetry save of", self.numSamples," samples."
         self.tx(0, command.START_TELEMETRY, pack('L',self.numSamples))
@@ -280,13 +283,16 @@ class Velociroach:
             time.sleep(0.3)
             
     def setGait(self, gaitConfig):
+        self.currentGait = gaitConfig
+        
         self.clAnnounce()
         print " --- Setting complete gait config --- "
-        
         self.setPhase(gaitConfig.phase)
         self.setMotorGains(gaitConfig.motorgains)
         self.setVelProfile(gaitConfig) #whole object is passed in, due to several references
         
+        self.clAnnounce()
+        print " ------------------------------------ "
         
         
         
@@ -342,4 +348,12 @@ def verifyAllQueried():
             print "CRITICAL : Could not query robot 0x%02X" % r.DEST_ADDR_int
             xb_safe_exit(shared.xb)
 
-    
+def dlProgress(current, total):
+    percent = int(100.0*current/total)
+    dashes = int(floor(percent/100.0 * 45))
+    stars = 45 - dashes - 1
+    barstring = '|' + '-'*dashes + '>' + '*'*stars + '|'
+    #sys.stdout.write("\r" + "Downloading ...%d%%   " % percent)
+    sys.stdout.write("\r" + str(current).rjust(5) +"/"+ str(total).ljust(5) + "   ")
+    sys.stdout.write(barstring)
+    sys.stdout.flush()

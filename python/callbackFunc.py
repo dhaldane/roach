@@ -1,6 +1,7 @@
 from lib import command
 from struct import pack,unpack
 import time
+import traceback
 
 import shared
 
@@ -85,26 +86,32 @@ def xbee_received(packet):
             for r in shared.ROBOTS:
                 if r.DEST_ADDR_int == src_addr:
                     r.motor_gains_set = True
-                    
+        
         # FLASH_READBACK
         elif type == command.FLASH_READBACK:
-            shared.pkts = shared.pkts + 1
+            #shared.pkts = shared.pkts + 1
             #print "Special Telemetry Data Packet, ",shared.pkts
             datum = unpack(pattern, data)
             datum = list(datum)
-            telem_index = datum.pop(0)
-            print "Special Telemetry Data Packet #", telem_index, '\r',
-            # print datum
+            telem_index = datum.pop(0) #pop removes this from data array
+            #print "Special Telemetry Data Packet #",telem_index
+            #print datum
             if (datum[0] != -1) and (telem_index) >= 0:
-                shared.imudata[telem_index] = datum
-                shared.bytesIn = shared.bytesIn + (5*4 + 11*2)
-                
+                for r in shared.ROBOTS:
+                    if r.DEST_ADDR_int == src_addr:
+                        if telem_index <= r.numSamples:
+                            r.telemtryData[telem_index] = datum
+                        else:
+                            print "Got out of range telem_index =",telem_index
+        
         # ERASE_SECTORS
         elif type == command.ERASE_SECTORS:
             datum = unpack(pattern, data)
-            #if datum[0] == 0:
-            #    shared.flash_erased = True
-            shared.flash_erased = datum[0]
+            print "Erased flash for", datum[0], " samples."
+            if datum[0] != 0:
+                for r in shared.ROBOTS:
+                    if r.DEST_ADDR_int == src_addr:
+                        r.flash_erased = datum[0] 
             
         # SLEEP
         elif type == command.SLEEP:
@@ -130,12 +137,13 @@ def xbee_received(packet):
             for r in shared.ROBOTS:
                 if r.DEST_ADDR_int == src_addr:
                     r.robot_queried = True 
-    
+
     except Exception as args:
         print "\nGeneral exception from callbackfunc:",args
-        print "Attemping to exit cleanly..."
+        print "\n    ******    TRACEBACK    ******    "
+        traceback.print_exc()
+        print "    *****************************    \n"
+        print "Attempting to exit cleanly..."
         shared.xb.halt()
         shared.ser.close()
         sys.exit()
-
-

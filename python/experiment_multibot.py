@@ -21,8 +21,8 @@ def main():
     xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
     
     R1 = Velociroach('\x20\x52', xb)
-    R1.SAVE_DATA = False    #Not currently working VR, since flash erase sends no 'finished' packet
-                            #TODO: getting flash erase to work is critical to function testing (pullin)
+    R1.SAVE_DATA = True    #TODO: getting flash erase to work is critical to function testing (pullin)
+                            
     #R1.RESET = False       #current roach code does not support software reset
     
     shared.ROBOTS.append(R1) #This is necessary so callbackfunc can reference robots
@@ -46,7 +46,8 @@ def main():
     # Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
+    #motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
+    motorgains = [0,0,0,0,0 , 0,0,0,0,0]
 
     simpleAltTripod = GaitConfig(motorgains, rightFreq=5, leftFreq=5) # Parameters can be passed into object upon construction, as done here.
     simpleAltTripod.phase = PHASE_180_DEG                             # Or set individually, as here
@@ -58,7 +59,7 @@ def main():
     R1.setGait(simpleAltTripod)
 
     # example , 0.1s lead in + 2s run + 0.1s lead out
-    EXPERIMENT_RUN_TIME_MS     = 2000 #ms
+    EXPERIMENT_RUN_TIME_MS     = 500 #ms
     EXPERIMENT_LEADIN_TIME_MS  = 100  #ms
     EXPERIMENT_LEADOUT_TIME_MS = 100  #ms
     
@@ -66,7 +67,7 @@ def main():
     for r in shared.ROBOTS:
         if r.SAVE_DATA:
             #This needs to be done to prepare the .telemtryData variables in each robot object
-            r.setupTelemetryDataTime(EXPERIMENT_RUN_TIME_MS / 1000.0)   #argument to time.sleep is in SECONDS
+            r.setupTelemetryDataTime(EXPERIMENT_LEADIN_TIME_MS + EXPERIMENT_RUN_TIME_MS + EXPERIMENT_LEADOUT_TIME_MS)
             r.eraseFlashMem()
         
     # Pause and wait to start run, including lead-in time
@@ -86,7 +87,7 @@ def main():
     time.sleep(EXPERIMENT_LEADIN_TIME_MS / 1000.0)
     
     ######## Motion is initiated here! ########
-    R1.startTimedRun( EXPERIMENT_RUN_TIME_MS )
+    R1.startTimedRun( EXPERIMENT_RUN_TIME_MS ) #Faked for now, since pullin doesn't have a working VR+AMS to test with
     time.sleep(EXPERIMENT_RUN_TIME_MS / 1000.0)  #argument to time.sleep is in SECONDS
     ######## End of motion commands   ########
     
@@ -95,7 +96,6 @@ def main():
     
     for r in shared.ROBOTS:
         if r.SAVE_DATA:
-            time.sleep(0.25) #and a little extra, for system settle
             raw_input("Press Enter to start telemetry read-back ...")
             r.downloadTelemetry()
     
