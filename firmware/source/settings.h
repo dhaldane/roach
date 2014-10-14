@@ -18,5 +18,9 @@
 #define RADIO_TXPQ_MAX_SIZE   10
 #define RADIO_RXPQ_MAX_SIZE   10
 
-#define TELEM_INCLUDE "vr-telem.h"
+//Telemetry type setup
+#define TELEM_TYPE vrTelemStruct_t
+#define TELEM_INCLUDE "vr_telem.h"
+#define TELEMPACKFUNC(x) vrTelemGetData(x)
+
 #endif //_SETTINGS_H
