@@ -18,7 +18,7 @@
 //Timer parameters
 #define TIMER_FREQUENCY     1000.0                // 1000 Hz
 #define TIMER_PERIOD        1/TIMER_FREQUENCY
-#define DEFAULT_SKIP_NUM    1 //Default to 150 Hz save rate
+#define DEFAULT_SKIP_NUM    1
 
 
 #if defined(__RADIO_HIGH_DATA_RATE)
@@ -40,10 +40,10 @@ static unsigned int telemSkipNum = DEFAULT_SKIP_NUM;
 static unsigned int skipcounter = DEFAULT_SKIP_NUM;
 static unsigned long sampIdx = 0;
 
-static unsigned long samplesToStream = 0;
-static char telemStreamingFlag = TELEM_STREAM_OFF;
-static unsigned int streamSkipCounter = 0;
-static unsigned int streamSkipNum = 15;
+//static unsigned long samplesToStream = 0;
+//static char telemStreamingFlag = TELEM_STREAM_OFF;
+//static unsigned int streamSkipCounter = 0;
+//static unsigned int streamSkipNum = 15;
 
 //Offset for time value when recording samples
 static unsigned long telemStartTime = 0;
@@ -53,7 +53,7 @@ static DfmemGeometryStruct mem_geo;
 ///////////// Private functions //////////////
 //Function to be installed into T5, and setup function
 //static void SetupTimer5(); // Might collide with setup in steering module!
-static void telemServiceRoutine(void); //To be installed with sysService
+//static void telemServiceRoutine(void); //To be installed with sysService
 //The following local functions are called by the service routine:
 static void telemISRHandler(void);
 
@@ -61,15 +61,15 @@ static void telemISRHandler(void);
 ////////  Installed to Timer5 @ 300hz  ////////
 //void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
 
-static void telemServiceRoutine(void) {
+//static void telemServiceRoutine(void) {
     //This intermediate function is used in case we want to tie other
     //sub-taks to the telemtry service routine.
     //TODO: Is this neccesary?
 
     // Section for saving telemetry data to flash
     // Uses telemSkip as a divisor to T5.
-    telemISRHandler();
-}
+//    telemISRHandler();
+//}
 
 /*
 static void SetupTimer5() {
@@ -93,6 +93,8 @@ void telemSetup() {
     //Telemetry packet size is set at startupt time.
     telemDataSize = sizeof (TELEM_TYPE);
     telemPacketSize = sizeof (telemStruct_t);
+    Nop();
+    Nop();
 
     //Install telemetry service handler
     // Lines removed before to use telemetry module in direct mode, does not 

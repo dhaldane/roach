@@ -59,7 +59,7 @@ def main():
     R1.setGait(simpleAltTripod)
 
     # example , 0.1s lead in + 2s run + 0.1s lead out
-    EXPERIMENT_RUN_TIME_MS     = 800 #ms
+    EXPERIMENT_RUN_TIME_MS     = 20000 #ms
     EXPERIMENT_LEADIN_TIME_MS  = 100  #ms
     EXPERIMENT_LEADOUT_TIME_MS = 100  #ms
     
