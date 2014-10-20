@@ -255,7 +255,8 @@ static void telemISRHandler() {
             telemBuffer.timestamp = sclockGetTime() - telemStartTime;
             telemBuffer.sampleIndex = sampIdx;
             //Write telemetry data into packet
-            TELEMPACKFUNC((unsigned char*) &(telemBuffer.telemData));
+            //TELEMPACKFUNC((unsigned char*) &(telemBuffer.telemData));
+            TELEMPACKFUNC( &(telemBuffer.telemData) );
 
             telemSaveData(&telemBuffer);
             sampIdx++;

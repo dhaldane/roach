@@ -22,6 +22,7 @@ typedef struct {
     int16_t Vbatt; // battery voltage
 } vrTelemStruct_t;
 
-void vrTelemGetData(unsigned char* ptr);
+//void vrTelemGetData(unsigned char* ptr);
+void vrTelemGetData(vrTelemStruct_t* ptr);
 
 unsigned int vrTelemGetSize();

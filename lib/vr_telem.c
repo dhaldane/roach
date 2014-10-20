@@ -22,10 +22,11 @@
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
 
-void vrTelemGetData(unsigned char* ptr) {
+//void vrTelemGetData(unsigned char* ptr) {
+void vrTelemGetData(vrTelemStruct_t* ptr) {
     
-    vrTelemStruct_t* tptr;
-    tptr = (vrTelemStruct_t*) ptr;
+    //vrTelemStruct_t* tptr;
+    //tptr = (vrTelemStruct_t*) ptr;
 
     int gdata[3];   //gyrodata
     int xldata[3];  // accelerometer data
@@ -33,25 +34,25 @@ void vrTelemGetData(unsigned char* ptr) {
     mpuGetGyro(gdata);
     mpuGetXl(xldata);
 
-    tptr->posL = pidObjs[0].p_state;
-    tptr->posR = pidObjs[1].p_state;
-    tptr->composL = pidObjs[0].p_input + pidObjs[0].interpolate;
-    tptr->composR = pidObjs[1].p_input + pidObjs[1].interpolate;
-    tptr->dcL = pidObjs[0].output; // left
-    tptr->dcR = pidObjs[1].output; // right
-    tptr->bemfL = bemf[0];
-    tptr->bemfR = bemf[1];
+    ptr->posL = pidObjs[0].p_state;
+    ptr->posR = pidObjs[1].p_state;
+    ptr->composL = pidObjs[0].p_input + pidObjs[0].interpolate;
+    ptr->composR = pidObjs[1].p_input + pidObjs[1].interpolate;
+    ptr->dcL = pidObjs[0].output; // left
+    ptr->dcR = pidObjs[1].output; // right
+    ptr->bemfL = bemf[0];
+    ptr->bemfR = bemf[1];
 
     mpuGetGyro(gdata);
     mpuGetXl(xldata);
 
-    tptr->gyroX = gdata[0];
-    tptr->gyroY = gdata[1];
-    tptr->gyroZ = gdata[2];
-    tptr->accelX = xldata[0];
-    tptr->accelY = xldata[1];
-    tptr->accelZ = xldata[2];
-    tptr->Vbatt = (int) adcGetVbatt();
+    ptr->gyroX = gdata[0];
+    ptr->gyroY = gdata[1];
+    ptr->gyroZ = gdata[2];
+    ptr->accelX = xldata[0];
+    ptr->accelY = xldata[1];
+    ptr->accelZ = xldata[2];
+    ptr->Vbatt = (int) adcGetVbatt();
 }
 
 //This may be unneccesary, since the telemtry type isn't totally anonymous
