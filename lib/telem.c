@@ -1,3 +1,4 @@
+// Contents of this file are copyright Andrew Pullin, 2013
 
 #include "utils.h"
 #include "settings.h"
@@ -5,77 +6,102 @@
 #include "telem.h"
 #include "radio.h"
 #include "at86rf231_driver.h"
-#include "led.h"
 #include "sclock.h"
-#include "timer.h"
+//#include "sys_service.h"
 #include "cmd.h" //for CMD codes
-#include "adc_pid.h"
-#include "mpu6000.h"
-#include "pid-ip2.5.h"
-#include "settings.h"
 #include <string.h> //for memcpy
 
+//This is a terrible hack to avoid bus conflicts.
+//TODO: find source of bus problems and fix
+#include <timer.h>
+
+//Timer parameters
+#define TIMER_FREQUENCY     1000.0                // 1000 Hz
+#define TIMER_PERIOD        1/TIMER_FREQUENCY
+#define DEFAULT_SKIP_NUM    1
+
+
+#if defined(__RADIO_HIGH_DATA_RATE)
+#define READBACK_DELAY_TIME_MS 3
+#else
+#define READBACK_DELAY_TIME_MS 4
+#endif
+
+telemStruct_t telemBuffer;
+unsigned int telemDataSize;
 unsigned int telemPacketSize;
 
+#define TELEM_HEADER_SIZE   sizeof(telemBuffer.sampleIndex) + sizeof(telemBuffer.timestamp)
+
 ////////   Private variables   ////////////////
+static unsigned long samplesToSave = 0;
+//Skip counter for dividing the 300hz timer into lower telemetry rates
+static unsigned int telemSkipNum = DEFAULT_SKIP_NUM;
+static unsigned int skipcounter = DEFAULT_SKIP_NUM;
+static unsigned long sampIdx = 0;
 
-unsigned long samplesToSave;
-unsigned long sampIdx = 0;
-
+//static unsigned long samplesToStream = 0;
+//static char telemStreamingFlag = TELEM_STREAM_OFF;
+//static unsigned int streamSkipCounter = 0;
+//static unsigned int streamSkipNum = 15;
 
 //Offset for time value when recording samples
-unsigned long telemStartTime;
+static unsigned long telemStartTime = 0;
 
 static DfmemGeometryStruct mem_geo;
 
-// store current PID info into structure. Used by telemSaveSample and CmdGetPIDTelemetry
+///////////// Private functions //////////////
+//Function to be installed into T5, and setup function
+//static void SetupTimer5(); // Might collide with setup in steering module!
+//static void telemServiceRoutine(void); //To be installed with sysService
+//The following local functions are called by the service routine:
+static void telemISRHandler(void);
 
-int gdata[3];   //gyrodata
-int xldata[3];  // accelerometer data 
-extern int bemf[NUM_PIDS];
-extern pidPos pidObjs[NUM_PIDS];
-telemStruct_t telemPIDdata;
+/////////        Telemtry ISR          ////////
+////////  Installed to Timer5 @ 300hz  ////////
+//void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
 
-void telemGetPID(){
+//static void telemServiceRoutine(void) {
+    //This intermediate function is used in case we want to tie other
+    //sub-taks to the telemtry service routine.
+    //TODO: Is this neccesary?
 
-    telemPIDdata.posL = pidObjs[0].p_state;
-    telemPIDdata.posR = pidObjs[1].p_state;
-    telemPIDdata.composL = pidObjs[0].p_input + pidObjs[0].interpolate;
-    telemPIDdata.composR = pidObjs[1].p_input + pidObjs[1].interpolate;
-    telemPIDdata.dcL = pidObjs[0].output; // left
-    telemPIDdata.dcR = pidObjs[1].output; // right
-    telemPIDdata.bemfL = bemf[0];
-    telemPIDdata.bemfR = bemf[1];
+    // Section for saving telemetry data to flash
+    // Uses telemSkip as a divisor to T5.
+//    telemISRHandler();
+//}
 
-    mpuGetGyro(gdata);
-    mpuGetXl(xldata);
-
-    telemPIDdata.gyroX = gdata[0];
-    telemPIDdata.gyroY = gdata[1];
-    telemPIDdata.gyroZ = gdata[2];
-    telemPIDdata.accelX = xldata[0];
-    telemPIDdata.accelY = xldata[1];
-    telemPIDdata.accelZ = xldata[2];
-    telemPIDdata.Vbatt = (int) adcGetVbatt();
-
-    // Save Data to flash
-    if (samplesToSave > 0) {
-        telemPIDdata.timestamp = sclockGetTime() - telemStartTime;
-        telemPIDdata.sampleIndex = sampIdx;
-
-        telemSaveData(&telemPIDdata);
-        sampIdx++;
-    }
-
-    return;
+/*
+static void SetupTimer5() {
+    ///// Timer 5 setup, Steering ISR, 300Hz /////
+    // period value = Fcy/(prescale*Ftimer)
+    unsigned int T5CON1value, T5PERvalue;
+    // prescale 1:64
+    T5CON1value = T5_ON & T5_IDLE_CON & T5_GATE_OFF & T5_PS_1_64 & T5_SOURCE_INT;
+    // Period is set so that period = 5ms (200Hz), MIPS = 40
+    //T5PERvalue = 2083; // ~300Hz
+    T5PERvalue = 625; //1Khz
+    int retval;
+    //retval = sysServiceConfigT5(T5CON1value, T5PERvalue, T5_INT_PRIOR_4 & T5_INT_ON);
 }
+*/
 
 void telemSetup() {
 
     dfmemGetGeometryParams(&mem_geo); // Read memory chip sizing
 
     //Telemetry packet size is set at startupt time.
+    telemDataSize = sizeof (TELEM_TYPE);
     telemPacketSize = sizeof (telemStruct_t);
+    Nop();
+    Nop();
+
+    //Install telemetry service handler
+    // Lines removed before to use telemetry module in direct mode, does not 
+    // run its own ISR. (pullin, 10/9/14)
+    //int retval;
+    //retval = sysServiceInstallT5(telemServiceRoutine);
+    //SetupTimer5();
 }
 
 void telemSetSamplesToSave(unsigned long n) {
@@ -83,35 +109,46 @@ void telemSetSamplesToSave(unsigned long n) {
     sampIdx = 0;
 }
 
-void telemSendDataDelay(telemStruct_t* sample) {
-    delay_ms(5);
-    radioSendData(RADIO_DST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize,   //TODO: Robot should respond to source of query, not hardcoded address
-           (unsigned char*) sample, 0 );
-    LED_2 = ~LED_2;
-}
-
 void telemReadbackSamples(unsigned long numSamples) {
+    int delaytime_ms = READBACK_DELAY_TIME_MS;
     unsigned long i = 0; //will actually be the same as the sampleIndex
-    LED_GREEN = 1;
-    //Disable motion interrupts for readback
 
     telemStruct_t sampleData;
+
+    //This is a terrible hack to avoid bus conflicts.
+    //TODO: find source of bus problems and fix
     DisableIntT1;
+
     for (i = 0; i < numSamples; i++) {
         //Retireve data from flash
         telemGetSample(i, sizeof (sampleData), (unsigned char*) (&sampleData));
-        telemSendDataDelay(&sampleData);
-
+        //Reliable send, with linear backoff
+        do {
+            //debugpins1_set();
+            telemSendDataDelay(&sampleData, delaytime_ms);
+            //Linear backoff
+            delaytime_ms += 0;
+            //debugpins1_clr();
+        } while (trxGetLastACKd() == 0);
+        
+        delaytime_ms = READBACK_DELAY_TIME_MS;
     }
-    EnableIntT1;
-    LED_GREEN = 0;
 
+    //This is a terrible hack to avoid bus conflicts.
+    //TODO: find source of bus problems and fix
+    EnableIntT1;
 }
 
+void telemSendDataDelay(telemStruct_t* sample, int delaytime_ms) {
+    radioSendData(RADIO_DST_ADDR, 0, CMD_FLASH_READBACK, telemPacketSize, (unsigned char *)sample, 0);
+    delay_ms(delaytime_ms); // allow radio transmission time
+}
+
+
 //Saves telemetry data structure into flash memory, in order
-
+//Position in flash memory is maintained by dfmem module
 void telemSaveData(telemStruct_t * telemPkt) {
-
+    
     //Write the packet header info to the DFMEM
     dfmemSave((unsigned char*) telemPkt, sizeof(telemStruct_t));
     samplesToSave--;
@@ -128,7 +165,13 @@ void telemErase(unsigned long numSamples) {
     //dfmemEraseSectorsForSamples(numSamples, sizeof (telemU));
     // TODO (apullin) : Add an explicit check to see if the number of saved
     //                  samples will fit into memory!
-    LED_2 = 1;
+
+    //Green LED will be used as progress indicator
+
+    //Horibble hack: Disable IMU while erasing flash
+    _T4IE = 0;
+
+    LED_GREEN = 1;
     unsigned int firstPageOfSector, i;
 
     //avoid trivial case
@@ -141,34 +184,47 @@ void telemErase(unsigned long numSamples) {
     unsigned int numPages = (numSamples + samplesPerPage - 1) / samplesPerPage; //round UP int division
     unsigned int numSectors = (numPages + mem_geo.pages_per_sector - 1) / mem_geo.pages_per_sector;
 
+    //This is a terrible hack to avoid bus conflicts.
+    //TODO: find source of bus problems and fix
+    DisableIntT1;
+
     //At this point, it is impossible for numSectors == 0
     //Sector 0a and 0b will be erased together always, for simplicity
     //Note that numSectors will be the actual number of sectors to erase,
     //   even though the sectors themselves are numbered starting at '0'
-    DisableIntT1;
     dfmemEraseSector(0); //Erase Sector 0a
+    LED_GREEN = ~LED_GREEN;
     dfmemEraseSector(8); //Erase Sector 0b
+    LED_GREEN = ~LED_GREEN;
 
-    //Start erasing the rest from Sector 1:
-    for (i = 1; i <= numSectors; i++) {
+    //Start erasing the rest from Sector 1,
+    // The (numsectors-1) here is because sectors are numbered from 0, whereas
+    // numSectors is the actual count of sectors to erase; fencepost error.
+    for (i = 1; i <= (numSectors-1); i++) {
         firstPageOfSector = mem_geo.pages_per_sector * i;
-        //hold off until dfmem is ready for secort erase command
-        //while (!dfmemIsReady());
+        //hold off until dfmem is ready for sector erase command
         //LED should blink indicating progress
-        LED_2 = ~LED_2;
         //Send actual erase command
         dfmemEraseSector(firstPageOfSector);
+        LED_GREEN = ~LED_GREEN;
     }
-    EnableIntT1;
+
     //Leadout flash, should blink faster than above, indicating the last sector
-    //while (!dfmemIsReady()) {
-    //    LED_2 = ~LED_2;
-    //    delay_ms(75);
-    //}
-    LED_2 = 0; //Green LED off
+    while (!dfmemIsReady()) {
+        LED_GREEN = ~LED_GREEN;
+        delay_ms(50);
+    }
+    LED_GREEN = 0; //Green LED off
+
+    //This is a terrible hack to avoid bus conflicts.
+    //TODO: find source of bus problems and fix
+    EnableIntT1;
 
     //Since we've erased, reset our place keeper vars
     dfmemZeroIndex();
+
+    //Horibble hack: Disable IMU while erasing flash
+    _T4IE = 1;
 }
 
 
@@ -179,6 +235,43 @@ void telemGetSample(unsigned long sampNum, unsigned int sampLen, unsigned char *
     unsigned int byteOffset = (sampNum - pagenum*samplesPerPage)*sampLen;
 
     dfmemRead(pagenum, byteOffset, sampLen, data);
+}
+
+//This only exists to allow an exteral module to cause a telemetry save
+//immediately. (pullin, 10/9/14)
+void telemSaveNow(){
+    telemISRHandler();
+}
+
+////   Private functions
+////////////////////////
+
+static void telemISRHandler() {
+
+    //skipcounter decrements to 0, triggering a telemetry save, and resets
+    // value of skicounter
+    if (skipcounter == 0) {
+        if (samplesToSave > 0) {
+            telemBuffer.timestamp = sclockGetTime() - telemStartTime;
+            telemBuffer.sampleIndex = sampIdx;
+            //Write telemetry data into packet
+            //TELEMPACKFUNC((unsigned char*) &(telemBuffer.telemData));
+            TELEMPACKFUNC( &(telemBuffer.telemData) );
+
+            telemSaveData(&telemBuffer);
+            sampIdx++;
+        }
+        //Reset value of skip counter
+        skipcounter = telemSkipNum;
+    }
+    //Always decrement skip counter at every interrupt, at 300Hz
+    //This way, if telemSkipNum = 1, a sample is saved at every interrupt.
+    skipcounter--;
+
+}
+
+void telemSetSkip(unsigned int skipnum) {
+    telemSkipNum = skipnum;
 }
 
 //This function is a setter for the telemStartTime variable,

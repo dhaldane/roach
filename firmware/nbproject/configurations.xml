@@ -36,7 +36,7 @@
         <itemPath>../lib/pid-ip2.5.h</itemPath>
         <itemPath>../lib/tests.h</itemPath>
         <itemPath>../lib/telem.h</itemPath>
-        <itemPath>../lib/vr-telem.h</itemPath>
+        <itemPath>../lib/vr_telem.h</itemPath>
       </logicalFolder>
       <itemPath>source/cmd.h</itemPath>
       <itemPath>source/settings.h</itemPath>
@@ -53,7 +53,6 @@
                      projectFiles="true">
         <itemPath>../../imageproc-lib/ams-enc.c</itemPath>
         <itemPath>../../imageproc-lib/at86rf231_driver.c</itemPath>
-        <itemPath>../../imageproc-lib/battery.c</itemPath>
         <itemPath>../../imageproc-lib/carray.c</itemPath>
         <itemPath>../../imageproc-lib/dfmem.c</itemPath>
         <itemPath>../../imageproc-lib/mac_packet.c</itemPath>
@@ -78,6 +77,7 @@
         <itemPath>../lib/traps.c</itemPath>
         <itemPath>../lib/telem.c</itemPath>
         <itemPath>../lib/tests.c</itemPath>
+        <itemPath>../lib/vr_telem.c</itemPath>
       </logicalFolder>
       <itemPath>source/cmd.c</itemPath>
       <itemPath>source/main.c</itemPath>
@@ -119,7 +119,7 @@
       </compileType>
       <makeCustomizationType>
         <makeCustomizationPreStepEnabled>true</makeCustomizationPreStepEnabled>
-        <makeCustomizationPreStep>python ../../imageproc-lib/version.py "DHALDANE_ROACH;AMS_ENC"</makeCustomizationPreStep>
+        <makeCustomizationPreStep>python ../../imageproc-lib/version.py 'DHALDANE_ROACH;AMS_ENC'</makeCustomizationPreStep>
         <makeCustomizationPostStepEnabled>false</makeCustomizationPostStepEnabled>
         <makeCustomizationPostStep></makeCustomizationPostStep>
         <makeCustomizationPutChecksumInUserID>false</makeCustomizationPutChecksumInUserID>
@@ -161,7 +161,7 @@
         <property key="optimization-level" value="0"/>
         <property key="post-instruction-scheduling" value="default"/>
         <property key="pre-instruction-scheduling" value="default"/>
-        <property key="preprocessor-macros" value="__IMAGEPROC2"/>
+        <property key="preprocessor-macros" value=""/>
         <property key="scalar-model" value="default"/>
         <property key="use-cci" value="false"/>
         <property key="use-iar" value="false"/>
@@ -238,7 +238,7 @@
         <property key="fast-math" value="false"/>
         <property key="generic-16-bit" value="false"/>
         <property key="legacy-libc" value="false"/>
-        <property key="oXC16glb-macros" value=""/>
+        <property key="oXC16glb-macros" value="__IMAGEPROC25"/>
         <property key="output-file-format" value="elf"/>
         <property key="relaxed-math" value="false"/>
         <property key="save-temps" value="false"/>
@@ -337,7 +337,7 @@
         <property key="tracecontrol.tracebufmax" value="546000"/>
         <property key="tracecontrol.tracefile"
                   value="C:\Users\pullin\Desktop\GIT code\roach\firmware\defmplabxtrace.log"/>
-        <property key="tracecontrol.tracefilemax" value="1048510"/>
+        <property key="tracecontrol.tracefilemax" value="10000000"/>
         <property key="voltagevalue" value="3.25"/>
       </RealICEPlatformTool>
     </conf>
