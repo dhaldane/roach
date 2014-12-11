@@ -19,6 +19,7 @@ unsigned int telemPacketSize;
 ////////   Private variables   ////////////////
 
 unsigned long samplesToSave;
+unsigned int telem_divisor;
 unsigned long sampIdx = 0;
 
 
@@ -33,9 +34,11 @@ int gdata[3];   //gyrodata
 int xldata[3];  // accelerometer data 
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
+static volatile unsigned char telemetry_count = 0;
 telemStruct_t telemPIDdata;
 
 void telemGetPID(){
+    telemetry_count++;
 
     telemPIDdata.posL = pidObjs[0].p_state;
     telemPIDdata.posR = pidObjs[1].p_state;
@@ -56,6 +59,13 @@ void telemGetPID(){
     telemPIDdata.accelY = xldata[1];
     telemPIDdata.accelZ = xldata[2];
     telemPIDdata.Vbatt = (int) adcGetVbatt();
+
+    if(telemetry_count == telem_divisor && telem_divisor > 50){ //Max telem streaming rate = 20
+        telemetry_count = 0;
+        radioSendData(RADIO_DEST_ADDR, 0, CMD_STREAM_READBACK, telemPacketSize,
+               (unsigned char*) &telemPIDdata, 0 );
+        LED_2 = ~LED_2;
+    }
 
     // Save Data to flash
     if (samplesToSave > 0) {
@@ -121,6 +131,10 @@ void telemSaveData(telemStruct_t * telemPkt) {
         //Done sampling, commit last buffer
         dfmemSync();
     }
+}
+
+void telemSetDivisor(unsigned int divisor){
+    telem_divisor = divisor;
 }
 
 void telemErase(unsigned long numSamples) {

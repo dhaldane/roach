@@ -11,6 +11,7 @@
 
 // Prototypes
 void telemSetup(); //To be called in main
+void telemSetDivisor();
 void telemReadbackSamples(unsigned long);
 void telemSaveData(telemStruct_t *data);
 void telemGetPID();
