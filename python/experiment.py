@@ -73,6 +73,8 @@ def main():
             xb_send(0, command.SET_PHASE, pack('l', params.phase))
             time.sleep(0.01)
             xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
+            time.sleep(0.01)
+            xb_send(0, command.SET_TELEM_DIVISOR, pack('H', 100))
             time.sleep(params.duration / 1000.0)
 
         if params.telemetry and query_yes_no("Save Data?"):
