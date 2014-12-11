@@ -106,7 +106,7 @@ void cmdPushFunc(MacPacket rx_packet) {
 unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
     unsigned char i, string_length; unsigned char *version_string;
     // maximum string length to avoid packet size limit
-    version_string = versionGetString();
+    version_string = (unsigned char*)versionGetString();
     i = 0;
     while((i < 127) && version_string[i] != '\0') {
         i++;
@@ -203,6 +203,8 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     pidObjs[1].pwmDes = thrust2;
 
     pidObjs[0].mode = 1;
+
+    return 1;
  }
 
  unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
