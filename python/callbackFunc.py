@@ -20,6 +20,7 @@ pktFormat = { \
     command.SOFTWARE_RESET:         '', \
     command.ERASE_SECTORS:          'L', \
     command.FLASH_READBACK:         '=LL' +'4l'+'11h', \
+    command.STREAM_READBACK:        '=LL' +'4l'+'11h', \
     command.SLEEP:                  'b', \
     command.ECHO:                   'c' ,\
     command.SET_VEL_PROFILE:        '8h' ,\
@@ -101,7 +102,14 @@ def xbee_received(packet):
             # print datum
             if (datum[0] != -1) and (telem_index) >= 0:
                 shared.imudata[telem_index] = datum
-                shared.bytesIn = shared.bytesIn + (5*4 + 11*2)
+                shared.bytesIn = shared.bytesIn + (5*4 + 11*2)        
+        # STREAM_READBACK
+        elif type == command.STREAM_READBACK:
+            datum = unpack(pattern, data)
+            datum = list(datum)
+            telem_index = datum.pop(0)
+            gyro_x = datum.pop(8)
+            print "Telemetry Data Packet #", telem_index, "Gyro X:", gyro_x, '\r',
         # ERASE_SECTORS
         elif type == command.ERASE_SECTORS:
             datum = unpack(pattern, data)

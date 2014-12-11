@@ -52,6 +52,7 @@ static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsig
 //Experiment/Flash Commands
 static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdSetTelemDivisor(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 static unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
 /*-----------------------------------------------------------------------------
@@ -81,6 +82,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_PHASE] = &cmdSetPhase;   
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
+    cmd_func[CMD_SET_TELEM_DIVISOR] = &cmdSetTelemDivisor;
 
 }
 
@@ -155,6 +157,12 @@ unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsign
     }
     return 1;
 }
+
+unsigned char cmdSetTelemDivisor(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+    unsigned int telemDivisor = frame[0] + (frame[1] << 8);
+    telemSetDivisor(telemDivisor);
+    return 1;
+}
 unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
     telemErase(numSamples);
@@ -197,6 +205,8 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     pidObjs[1].pwmDes = thrust2;
 
     pidObjs[0].mode = 1;
+
+    return 1;
  }
 
  unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
