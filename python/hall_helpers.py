@@ -126,8 +126,8 @@ def settingsMenu(params, manParams):
             print 'Enter Duty Cycle (Left,Right) : ',
             x = raw_input()
             if len(x):
-                pwmDes = map(float,x.split(','))
-            xb_send(0, command.SET_MOTOR_MODE, pack('2h', pwmDes))
+                pwmDes = map(int,x.split(','))
+            xb_send(0, command.SET_MOTOR_MODE, pack('2h', *pwmDes))
             print 'Set Duty cycle: ', pwmDes
         elif keypress == 'b':
             print 'Manuever Enabled'
