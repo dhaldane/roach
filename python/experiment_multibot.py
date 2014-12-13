@@ -10,7 +10,7 @@ The main function will send all the setup parameters to the robots, execute defi
 from lib import command
 import time,sys,os,traceback
 import serial
-import shared
+import shared_multi as shared
 
 from velociroach import *
 
