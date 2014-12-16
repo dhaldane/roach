@@ -2,7 +2,7 @@ language: c
 # whitelist
 branches:
   only:
-    - autobuild
+    - master
 
 before_install:
   - sudo apt-get install -y libc6:i386
@@ -15,10 +15,10 @@ install:
  - wget http://www.eecs.berkeley.edu/~pullin/travis/microchip-complete.tar.gz
  - tar xzf microchip-complete.tar.gz
 
-# Setup step, get PIC gcc compiler and libs  
+# Setup step, get PIC gcc compiler and libs
 before_script:
  - git clone https://github.com/biomimetics/imageproc-lib
- 
+
 # Change this to your needs
 script:
 - pwd
