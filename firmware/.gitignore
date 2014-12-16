@@ -1,10 +1,17 @@
+# IDE output during build & debug
+build
+dist
+debug
+obj
 *.cof
 *.hex
 *.map
 *.mcs
 *.pyc
-build
-dist
+*.o
+*.d
+
+# IDE project files that are auto-updated
 nbproject/private
 nbproject/Makefile-default.mk
 nbproject/Makefile-genesis.properties

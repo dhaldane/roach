@@ -1,9 +1,5 @@
+# Python bytecode
 *.pyc
-*.mcw
-*.o
-*.hex
-*.map
-*.cof
-build
-dist
+
+# Automatically generated version string header
 version-string.h
