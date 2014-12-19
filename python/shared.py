@@ -1,10 +1,11 @@
-DEST_ADDR = '\x21\x02'
+#DEST_ADDR = '\x21\x02'
+DEST_ADDR = '\x20\x52'
 xb = []
 ser = []
 
 #Base station
-BS_COMPORT = 'COM4'
-BS_BAUDRATE = 111111
+BS_COMPORT = 'COM3'
+BS_BAUDRATE = 57600
 #XBee
 # BS_COMPORT = 'COM2'
 # BS_BAUDRATE = 57600
