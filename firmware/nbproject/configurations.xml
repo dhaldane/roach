@@ -26,6 +26,7 @@
         <itemPath>../../imageproc-lib/adc_pid.h</itemPath>
         <itemPath>../../imageproc-lib/i2c_driver.h</itemPath>
         <itemPath>../../imageproc-lib/init_default.h</itemPath>
+        <itemPath>../../imageproc-lib/telem.h</itemPath>
       </logicalFolder>
       <logicalFolder name="lib" displayName="lib" projectFiles="true">
         <itemPath>../lib/cmd_const.h</itemPath>
@@ -35,7 +36,6 @@
         <itemPath>../lib/led.h</itemPath>
         <itemPath>../lib/pid-ip2.5.h</itemPath>
         <itemPath>../lib/tests.h</itemPath>
-        <itemPath>../lib/telem.h</itemPath>
         <itemPath>../lib/vr_telem.h</itemPath>
       </logicalFolder>
       <itemPath>source/cmd.h</itemPath>
@@ -69,13 +69,13 @@
         <itemPath>../../imageproc-lib/i2c_driver.c</itemPath>
         <itemPath>../../imageproc-lib/init_default.c</itemPath>
         <itemPath>../../imageproc-lib/version.c</itemPath>
+        <itemPath>../../imageproc-lib/telem.c</itemPath>
       </logicalFolder>
       <logicalFolder name="lib" displayName="lib" projectFiles="true">
         <itemPath>../lib/init.c</itemPath>
         <itemPath>../lib/interrupts.c</itemPath>
         <itemPath>../lib/pid-ip2.5.c</itemPath>
         <itemPath>../lib/traps.c</itemPath>
-        <itemPath>../lib/telem.c</itemPath>
         <itemPath>../lib/tests.c</itemPath>
         <itemPath>../lib/vr_telem.c</itemPath>
       </logicalFolder>
@@ -298,6 +298,7 @@
         <property key="UART 1" value="true"/>
         <property key="UART 2" value="true"/>
         <property key="debugoptions.useswbreakpoints" value="false"/>
+        <property key="firmware.download.all" value="false"/>
         <property key="hwtoolclock.frcindebug" value="false"/>
         <property key="hwtoolclock.instructionspeed" value="4"/>
         <property key="hwtoolclock.units" value="mips"/>
