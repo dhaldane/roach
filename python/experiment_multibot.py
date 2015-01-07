@@ -20,7 +20,7 @@ EXIT_WAIT   = False
 def main():    
     xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
     
-    R1 = Velociroach('\x20\x52', xb)
+    R1 = Velociroach('\x00\x01', xb)
     R1.SAVE_DATA = False
                             
     #R1.RESET = False       #current roach code does not support software reset

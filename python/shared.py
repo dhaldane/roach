@@ -1,14 +1,12 @@
-#DEST_ADDR = '\x21\x02'
-DEST_ADDR = '\x20\x52'
+''' AP 1/7/15: This old style of shared.py is going to be deprecated soon. '''
+
+DEST_ADDR = '\x00\x01'
 xb = []
 ser = []
 
-#Base station
-BS_COMPORT = 'COM3'
+#Xbee serial
+BS_COMPORT = 'COM4'
 BS_BAUDRATE = 57600
-#XBee
-# BS_COMPORT = 'COM2'
-# BS_BAUDRATE = 57600
 
 motor_gains_set = False
 steering_gains_set = False
