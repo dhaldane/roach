@@ -392,7 +392,7 @@ def writeFileHeader(dataFileName, params, manParams):
     fileout.close()
 
 def eraseFlashMem(numSamples):
-    xb_send(0, command.ERASE_SECTORS, pack('h',numSamples))
+    xb_send(0, command.ERASE_SECTORS, pack('L',numSamples))
     print "Started erase, Enter to continue"
 
 def startTelemetrySave(numSamples):
