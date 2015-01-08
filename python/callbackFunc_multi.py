@@ -3,7 +3,7 @@ from struct import pack,unpack
 import time
 import traceback
 
-import shared
+import shared_multi as shared
 
 #Dictionary of packet formats, for unpack()
 pktFormat = { \
