@@ -38,8 +38,10 @@
         <itemPath>../lib/tests.h</itemPath>
         <itemPath>../lib/vr_telem.h</itemPath>
       </logicalFolder>
+      <logicalFolder name="f1" displayName="settings" projectFiles="true">
+        <itemPath>../../imageproc-settings/settings.h</itemPath>
+      </logicalFolder>
       <itemPath>source/cmd.h</itemPath>
-      <itemPath>source/settings.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -92,6 +94,7 @@
     <Elem>.</Elem>
     <Elem>../lib</Elem>
     <Elem>../../imageproc-lib</Elem>
+    <Elem>../../imageproc-settings</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -103,8 +106,8 @@
         <targetPluginBoard></targetPluginBoard>
         <platformTool>RealICEPlatformTool</platformTool>
         <languageToolchain>XC16</languageToolchain>
-        <languageToolchainVersion>1.23</languageToolchainVersion>
-        <platform>3</platform>
+        <languageToolchainVersion>1.21</languageToolchainVersion>
+        <platform>4</platform>
       </toolsSet>
       <compileType>
         <linkerTool>
@@ -143,7 +146,7 @@
         <property key="enable-symbols" value="true"/>
         <property key="enable-unroll-loops" value="false"/>
         <property key="extra-include-directories"
-                  value="../lib;../../imageproc-lib;source"/>
+                  value="../lib;../../imageproc-lib;source;../../imageproc-settings"/>
         <property key="isolate-each-function" value="false"/>
         <property key="keep-inline" value="false"/>
         <property key="oXC16gcc-align-arr" value="false"/>
