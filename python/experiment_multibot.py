@@ -21,7 +21,7 @@ def main():
     xb = setupSerial(shared.BS_COMPORT, shared.BS_BAUDRATE)
     
     R1 = Velociroach('\x00\x01', xb)
-    R1.SAVE_DATA = False
+    R1.SAVE_DATA = True
                             
     #R1.RESET = False       #current roach code does not support software reset
     
@@ -101,13 +101,9 @@ def main():
     
     if EXIT_WAIT:  #Pause for a Ctrl + C , if desired
         while True:
-            try:
-                time.sleep(0.1)
-            except KeyboardInterrupt:
-                break
+            time.sleep(0.1)
 
     print "Done"
-    xb_safe_exit(xb)
     
 #Provide a try-except over the whole main function
 # for clean exit. The Xbee module should have better
@@ -118,17 +114,11 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print "\nRecieved Ctrl+C, exiting."
-        shared.xb.halt()
-        shared.ser.close()
     except Exception as args:
-        print "\nGeneral exception:",args
+        print "\nGeneral exception from main:\n",args,'\n'
         print "\n    ******    TRACEBACK    ******    "
         traceback.print_exc()
         print "    *****************************    \n"
         print "Attempting to exit cleanly..."
-        shared.xb.halt()
-        shared.ser.close()
-        sys.exit()
-    except serial.serialutil.SerialException:
-        shared.xb.halt()
-        shared.ser.close()
+    finally:
+        xb_safe_exit(shared.xb)

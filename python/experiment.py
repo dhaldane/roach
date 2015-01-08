@@ -97,7 +97,7 @@ if __name__ == '__main__':
     except Exception as args:
         print "\nGeneral exception:",args
         print "\n    ******    TRACEBACK    ******    "
-        traceback.print_exc()
+        traceback.print_stack()
         print "    *****************************    \n"
         print "Attempting to exit cleanly..."
         shared.xb.halt()

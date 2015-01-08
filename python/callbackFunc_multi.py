@@ -138,6 +138,8 @@ def xbee_received(packet):
                 if r.DEST_ADDR_int == src_addr:
                     r.robot_queried = True 
 
+    except KeyboardInterrupt:
+        print "\nRecieved Ctrl+C in callbackfunc, exiting."
     except Exception as args:
         print "\nGeneral exception from callbackfunc:",args
         print "\n    ******    TRACEBACK    ******    "
