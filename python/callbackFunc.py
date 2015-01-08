@@ -1,8 +1,10 @@
 from lib import command
 from struct import pack,unpack
-import traceback
-import time
+import time,sys,os,traceback
 
+# Path to imageproc-settings repo must be added
+sys.path.append(os.path.dirname("../../imageproc-settings/"))
+sys.path.append(os.path.dirname("../imageproc-settings/"))      # Some projects have a single-directory structure
 import shared
 
 #Dictionary of packet formats, for unpack()

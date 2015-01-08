@@ -6,6 +6,10 @@ authors: stanbaek, apullin
 from lib import command
 import time,sys,os,traceback
 import serial
+
+# Path to imageproc-settings repo must be added
+sys.path.append(os.path.dirname("../../imageproc-settings/"))
+sys.path.append(os.path.dirname("../imageproc-settings/"))      # Some projects have a single-directory structure
 import shared
 
 from hall_helpers import *
