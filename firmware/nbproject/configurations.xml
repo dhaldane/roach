@@ -418,8 +418,7 @@
         <property key="tracecontrol.timerpriority" value="3"/>
         <property key="tracecontrol.timerselect" value="0"/>
         <property key="tracecontrol.tracebufmax" value="546000"/>
-        <property key="tracecontrol.tracefile"
-                  value="C:\Users\pullin\Desktop\GIT code\roach\firmware\defmplabxtrace.log"/>
+        <property key="tracecontrol.tracefile" value="defmplabxtrace.log"/>
         <property key="tracecontrol.tracefilemax" value="10000000"/>
         <property key="voltagevalue" value="3.25"/>
       </RealICEPlatformTool>

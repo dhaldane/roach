@@ -100,7 +100,7 @@ def xbee_received(packet):
             telem_index = datum.pop(0)
             print "Special Telemetry Data Packet #", telem_index, '\r',
             # print datum
-            if (datum[0] != -1) and (telem_index) >= 0:
+            if (datum[0] != -1) and (telem_index) >= 0: #valid index
                 shared.imudata[telem_index] = datum
                 shared.bytesIn = shared.bytesIn + (5*4 + 11*2)
         # ERASE_SECTORS

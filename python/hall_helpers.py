@@ -175,8 +175,8 @@ def repeatMenu(params):
              xb_send(0, command.ZERO_POS,  "Zero motor")
         elif keypress == 'q': 
             print "Exit."
-            xb.halt()
-            ser.close()
+            shared.xb.halt()
+            shared.ser.close()
             sys.exit(0)
 
 def setVelProfile(params, manParams, manFlag):
@@ -342,7 +342,7 @@ def sendWhoAmI():
     xb_send(0, command.WHO_AM_I, "Robot Echo") 
 
 def flashReadback(numSamples, params, manParams):
-    delay = 0.006
+    delay = 0.01
     # raw_input("Press any key to start readback of %d packets ..." % numSamples)
     print "started readback"
     shared.imudata = [ [] ] * numSamples  # reset imudata structure
