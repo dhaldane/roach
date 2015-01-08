@@ -18,6 +18,7 @@ install:
 # Setup step, get PIC gcc compiler and libs
 before_script:
  - git clone https://github.com/biomimetics/imageproc-lib
+ - git clone https://github.com/biomimetics/imageproc-settings
 
 # Change this to your needs
 script:
