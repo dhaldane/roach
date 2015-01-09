@@ -25,7 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-unsigned char (*cmd_func[MAX_CMD_FUNC])(unsigned char, unsigned char, unsigned char, unsigned char*);
+unsigned char (*cmd_func[MAX_CMD_FUNC])(unsigned char, unsigned char, unsigned char, unsigned char*, unsigned int);
 void cmdError(void);
 
 extern pidPos pidObjs[NUM_PIDS];
@@ -35,25 +35,25 @@ extern volatile CircArray fun_queue;
 /*-----------------------------------------------------------------------------
  *          Declaration of static functions
 -----------------------------------------------------------------------------*/
-static unsigned char cmdNop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdNop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Motor and PID functions
-static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Experiment/Flash Commands
-static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
-static unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame);
+static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 /*-----------------------------------------------------------------------------
  *          Public functions
 -----------------------------------------------------------------------------*/
@@ -103,7 +103,7 @@ void cmdPushFunc(MacPacket rx_packet) {
 
 
 // send robot info when queried
-unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     unsigned char i, string_length; unsigned char *version_string;
     // maximum string length to avoid packet size limit
     version_string = (unsigned char*)versionGetString();
@@ -112,13 +112,13 @@ unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char 
         i++;
     }
     string_length=i;
-    radioSendData(RADIO_DST_ADDR, status, CMD_WHO_AM_I, //TODO: Robot should respond to source of query, not hardcoded address
+    radioSendData(src_addr, status, CMD_WHO_AM_I, //TODO: Robot should respond to source of query, not hardcoded address
             string_length, version_string, 0);
     return 1; //success
 }
 
 unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
-        unsigned char length, unsigned char *frame) {
+        unsigned char length, unsigned char *frame, unsigned int src_addr) {
     long motor_count[2];
     motor_count[0] = pidObjs[0].p_state;
     motor_count[1] = pidObjs[1].p_state;
@@ -126,13 +126,13 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
     // motor_count[0] = encPos[0].pos;
     // motor_count[1] = encPos[1].pos;
 
-    radioSendData(RADIO_DST_ADDR, status, CMD_GET_AMS_POS,  //TODO: Robot should respond to source of query, not hardcoded address
+    radioSendData(src_addr, status, CMD_GET_AMS_POS,  //TODO: Robot should respond to source of query, not hardcoded address
             sizeof(motor_count), (unsigned char *)motor_count, 0);
     return 1;
 }
 // ==== Flash/Experiment Commands ==============================================================================
 // =============================================================================================================
-unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     unsigned int run_time = frame[0] + (frame[1] << 8);
     int i;
     for (i = 0; i < NUM_PIDS; i++){
@@ -147,7 +147,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
     return 1;
 }
 
-unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
     if (numSamples != 0) {
         telemSetStartTime(); // Start telemetry samples from approx 0 time
@@ -155,28 +155,28 @@ unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsign
     }
     return 1;
 }
-unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
     telemErase(numSamples);
     
     //Send confirmation packet; this only happens when flash erase is completed.
     //Note that the destination is the hard-coded RADIO_DST_ADDR
     //todo : extract the destination address properly.
-    radioSendData(RADIO_DST_ADDR, 0, CMD_ERASE_SECTORS, length, frame, 0);
+    radioSendData(src_addr, 0, CMD_ERASE_SECTORS, length, frame, 0);
 
     LED_RED = ~LED_RED;
     return 1;
 }
-unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame){
+unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     unsigned int numSamples = frame[0] + (frame[1] << 8);
-    telemReadbackSamples(numSamples);
+    telemReadbackSamples(numSamples, src_addr);
     return 1;
 }
 
 // ==== Motor PID Commands =====================================================================================
 // =============================================================================================================
 
-unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     int thrust1 = frame[0] + (frame[1] << 8);
     int thrust2 = frame[2] + (frame[3] << 8);
     unsigned int run_time_ms = frame[4] + (frame[5] << 8);
@@ -193,7 +193,7 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     return 1;
  } 
 
- unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+ unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
 
 
     int thrust1 = frame[0] + (frame[1] << 8);
@@ -207,7 +207,7 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     return 1;
  }
 
- unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+ unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     int Kp, Ki, Kd, Kaw, ff;
     int idx = 0;
 
@@ -224,14 +224,14 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     ff = frame[idx] + (frame[idx+1] << 8); idx+=2;
     pidSetGains(1,Kp,Ki,Kd,Kaw, ff);
 
-    radioSendData(RADIO_DST_ADDR, status, CMD_SET_PID_GAINS, 20, frame, 0); //TODO: Robot should respond to source of query, not hardcoded address
+    radioSendData(src_addr, status, CMD_SET_PID_GAINS, 20, frame, 0); //TODO: Robot should respond to source of query, not hardcoded address
     //Send confirmation packet
     // WARNING: Will fail at high data throughput
     //radioConfirmationPacket(RADIO_DEST_ADDR, CMD_SET_PID_GAINS, status, 20, frame);
     return 1; //success
 }
 
-unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     int interval[NUM_VELS], delta[NUM_VELS], vel[NUM_VELS], period, onceFlag;
     int idx = 0, i = 0;
     // Packet structure [Period, delta[NUM_VELS], FLAG, Period, delta[NUM_VELS], FLAG]
@@ -277,7 +277,7 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
     return 1; //success
 }
 
-unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     pidObjs[0].timeFlag = 0;
     pidObjs[1].timeFlag = 0;
     pidSetInput(0, 0);
@@ -289,24 +289,24 @@ unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsign
     return 1;
 }
 
-unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     pidObjs[0].onoff = 0;
     pidObjs[1].onoff = 0;
     return 1;
 }
 
-unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     long motor_count[2];
     motor_count[0] = pidObjs[0].p_state;
     motor_count[1] = pidObjs[1].p_state;
 
-    radioSendData(RADIO_DST_ADDR, status, CMD_GET_AMS_POS,  //TODO: Robot should respond to source of query, not hardcoded address
+    radioSendData(src_addr, status, CMD_GET_AMS_POS,  //TODO: Robot should respond to source of query, not hardcoded address
         sizeof(motor_count), (unsigned char *)motor_count, 0);
     pidZeroPos(0); pidZeroPos(1);
     return 1;
 }
 
-unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     long offset = 0, error;
     int i;
     for (i = 0; i < 4; i++)
@@ -334,6 +334,6 @@ void cmdError() {
     }
 }
 
-static unsigned char cmdNop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame) {
+static unsigned char cmdNop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     return 1;
 }

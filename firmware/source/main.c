@@ -113,13 +113,14 @@ int main() {
         // process commands from function queue
         while(!carrayIsEmpty(fun_queue)) {
             rx_packet = carrayPopHead(fun_queue);
+            unsigned int rx_src_addr = rx_packet->src_addr.val;
             if(rx_packet != NULL) {
                rx_payload = macGetPayload(rx_packet);
                if(rx_payload != NULL) {
                    rx_function = (test_function)(rx_payload->test);
                    if(rx_function != NULL) {
                        LED_2 = ~LED_2;
-                       (rx_function)(payGetType(rx_payload), payGetStatus(rx_payload), payGetDataLength(rx_payload), payGetData(rx_payload));
+                       (rx_function)(payGetType(rx_payload), payGetStatus(rx_payload), payGetDataLength(rx_payload), payGetData(rx_payload), rx_src_addr);
                    }
                }
                ppoolReturnFullPacket(rx_packet);
