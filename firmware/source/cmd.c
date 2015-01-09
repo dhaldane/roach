@@ -160,8 +160,6 @@ unsigned char cmdEraseSectors(unsigned char type, unsigned char status, unsigned
     telemErase(numSamples);
     
     //Send confirmation packet; this only happens when flash erase is completed.
-    //Note that the destination is the hard-coded RADIO_DST_ADDR
-    //todo : extract the destination address properly.
     radioSendData(src_addr, 0, CMD_ERASE_SECTORS, length, frame, 0);
 
     LED_RED = ~LED_RED;
