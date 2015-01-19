@@ -298,9 +298,10 @@ unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char
     motor_count[0] = pidObjs[0].p_state;
     motor_count[1] = pidObjs[1].p_state;
 
-    radioSendData(src_addr, status, CMD_GET_AMS_POS,  //TODO: Robot should respond to source of query, not hardcoded address
+    radioSendData(src_addr, status, CMD_ZERO_POS, 
         sizeof(motor_count), (unsigned char *)motor_count, 0);
-    pidZeroPos(0); pidZeroPos(1);
+    pidZeroPos(0);
+    pidZeroPos(1);
     return 1;
 }
 

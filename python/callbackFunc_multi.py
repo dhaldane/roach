@@ -123,7 +123,7 @@ def xbee_received(packet):
                 shared.awake = True;
         # ZERO_POS
         elif type == command.ZERO_POS:
-            print 'Hall zeros established; Previous motor positions:',
+            print 'AMS zeros established; Previous motor positions:',
             motor = unpack(pattern,data)
             print motor
             
