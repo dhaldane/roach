@@ -72,12 +72,12 @@
         <itemPath>../../imageproc-lib/init_default.c</itemPath>
         <itemPath>../../imageproc-lib/version.c</itemPath>
         <itemPath>../../imageproc-lib/telem.c</itemPath>
+        <itemPath>../../imageproc-lib/traps.c</itemPath>
       </logicalFolder>
       <logicalFolder name="lib" displayName="lib" projectFiles="true">
         <itemPath>../lib/init.c</itemPath>
         <itemPath>../lib/interrupts.c</itemPath>
         <itemPath>../lib/pid-ip2.5.c</itemPath>
-        <itemPath>../lib/traps.c</itemPath>
         <itemPath>../lib/tests.c</itemPath>
         <itemPath>../lib/vr_telem.c</itemPath>
       </logicalFolder>
