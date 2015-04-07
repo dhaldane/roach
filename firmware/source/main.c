@@ -1,24 +1,60 @@
-/*********************************************************************************************************
-* Name: main.c
-* Desc: A test suite for the ImageProc 2.2 system. These tests should not be
-* considered rigorous, exhaustive tests of the hardware, but rather
-* "smoke tests" - ie. turn on the functionality and make sure the 
-* hardware/software doesn't start "smoking."
-*
-* The architecture is based on a function pointer queue scheduling model. The
-* meat of the testing logic resides in test.c. If the radio has received a 
-* command packet during the previous timer interval for Timer2, the appropriate
-* function pointer is added to a queue in the interrupt service routine for 
-* Timer2 (interrupts.c). The main loop simply pops the function pointer off
-* the top of the queue and executes it. 
-*
-* Date: 2011-04-13
-* Author: AMH, Ryan Julian
-*********************************************************************************************************/
-#include "p33Fxxxx.h"
-#include "init.h"
-#include "init_default.h"
+/*******************************************************************************
+ *
+ * Copyright (c) 2015, Regents of the University of California
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *    This product includes software developed by the <organization>.
+ * 4. Neither the name of the <organization> nor the
+ *    names of its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY COPYRIGHT HOLDERS ''AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * ImageProc2.5 Main Loop
+ * 'roach' project for Biomimetics Millisystesm Lab
+ *
+ * This is the main entry point for the 'roach' project, targeting the
+ * ImageProc2.5 board and applications with VelociRoACH robots.
+ *
+ * This code calls to imageproc-lib to do chip, clock, and board setup.
+ * After that, module setup functions are called.
+ * Finally, the main loop is entered, where low-priority queues are serviced.
+ * 
+ * Note that a large amount of UART, radio, and cmd module code has crept into 
+ * this main loop implementation.
+ *
+ * Notes:
+ *   For minimal startup requirements, see 'imageproc-basic':
+ *   https://github.com/biomimetics/imageproc-basic
+ * 
+ *
+*******************************************************************************/
+
+#include <xc.h>
+//Library includes
 #include "timer.h"
+#include <stdlib.h>
+//imageproc-lib
+#include "init.h"  // TODO : init.h and init.c need to be obsoleted
+#include "init_default.h"
 #include "utils.h"
 #include "radio.h"
 #include "tih.h"
@@ -31,7 +67,6 @@
 #include "mpu6000.h"
 #include "sclock.h"
 #include "spi_controller.h"
-#include "interrupts.h"
 #include "pid-ip2.5.h"
 #include "adc_pid.h"
 #include "cmd.h"
@@ -39,7 +74,6 @@
 #include "ppool.h"
 #include "carray.h"
 
-#include <stdlib.h>
 
 static Payload rx_payload;
 static MacPacket rx_packet;
