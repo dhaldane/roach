@@ -2,7 +2,7 @@ import glob
 import time
 import sys
 from lib import command
-from callbackFunc import xbee_received
+from callbackFunc_multi import xbee_received
 import datetime
 import serial
 import shared_multi as shared
@@ -134,9 +134,9 @@ class Velociroach:
         lastRightDelta = 1-sum(gaitConfig.deltasRight)
         
         temp = [int(periodLeft), int(gaitConfig.deltasLeft[0]*deltaConv), int(gaitConfig.deltasLeft[1]*deltaConv),
-                int(gaitConfig.deltasLeft[2]*deltaConv), int(lastLeftDelta*deltaConv) , 1, \
+                int(gaitConfig.deltasLeft[2]*deltaConv), int(lastLeftDelta*deltaConv) , 0, \
                 int(periodRight), int(gaitConfig.deltasRight[0]*deltaConv), int(gaitConfig.deltasRight[1]*deltaConv),
-                int(gaitConfig.deltasRight[2]*deltaConv), int(lastRightDelta*deltaConv), 1]
+                int(gaitConfig.deltasRight[2]*deltaConv), int(lastRightDelta*deltaConv), 0]
         
         self.clAnnounce()
         print "     ",temp
@@ -290,11 +290,14 @@ class Velociroach:
         self.setPhase(gaitConfig.phase)
         self.setMotorGains(gaitConfig.motorgains)
         self.setVelProfile(gaitConfig) #whole object is passed in, due to several references
+        self.zeroPosition()
         
         self.clAnnounce()
         print " ------------------------------------ "
         
-        
+    def zeroPosition(self):
+        self.tx( 0, command.ZERO_POS, 'zero') #actual data sent in packet is not relevant
+        time.sleep(0.1) #built-in holdoff, since reset apparently takes > 50ms
         
 ########## Helper functions #################
 #TODO: find a home for these? Possibly in BaseStation class (pullin, abuchan)
@@ -318,11 +321,11 @@ def xb_safe_exit(xb):
     print "Halting xb"
     if xb is not None:
         xb.halt()
-    else:
-        shared.xb.halt()
         
     print "Closing serial"
-    shared.ser.close()
+    if xb.serial is not None:
+        xb.serial.close()
+        
     print "Exiting..."
     sys.exit(1)
     

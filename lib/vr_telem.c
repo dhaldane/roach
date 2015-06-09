@@ -34,6 +34,7 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     mpuGetGyro(gdata);
     mpuGetXl(xldata);
 
+    //Motion control
     ptr->posL = pidObjs[0].p_state;
     ptr->posR = pidObjs[1].p_state;
     ptr->composL = pidObjs[0].p_input + pidObjs[0].interpolate;
@@ -43,15 +44,15 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     ptr->bemfL = bemf[0];
     ptr->bemfR = bemf[1];
 
-    mpuGetGyro(gdata);
-    mpuGetXl(xldata);
-
+    //gyro and XL
     ptr->gyroX = gdata[0];
     ptr->gyroY = gdata[1];
     ptr->gyroZ = gdata[2];
     ptr->accelX = xldata[0];
     ptr->accelY = xldata[1];
     ptr->accelZ = xldata[2];
+
+    //Battery
     ptr->Vbatt = (int) adcGetVbatt();
 }
 

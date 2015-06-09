@@ -5,7 +5,7 @@ import time,sys,os,traceback
 # Path to imageproc-settings repo must be added
 sys.path.append(os.path.dirname("../../imageproc-settings/"))
 sys.path.append(os.path.dirname("../imageproc-settings/"))      # Some projects have a single-directory structure
-import shared
+import shared_multi as shared
 
 #Dictionary of packet formats, for unpack()
 pktFormat = { \
@@ -34,14 +34,21 @@ pktFormat = { \
 def xbee_received(packet):
     rf_data = packet.get('rf_data')
     #rssi = ord(packet.get('rssi'))
-    #(src_addr, ) = unpack('H', packet.get('source_addr'))
+    (src_addr, ) = unpack('>H', packet.get('source_addr'))
     #id = packet.get('id')
     #options = ord(packet.get('options'))
+    
+    #Only print pertinent SRC lines
+    #This also allows us to turn off messages on the fly, for telem download
+    for r in shared.ROBOTS:
+        if r.DEST_ADDR_int == src_addr:
+            if r.VERBOSE:
+                print "SRC: 0x%04X | " % src_addr,
    
     status = ord(rf_data[0])
     type = ord(rf_data[1])
-    # print 'Received %d' % type
-    data = rf_data[2:]   
+    data = rf_data[2:]
+    
     
     #Record the time the packet is received, so command timeouts
     # can be done
@@ -73,44 +80,41 @@ def xbee_received(packet):
         # ECHO
         elif type == command.ECHO:
             print "echo: status = ",status," type=",type," data = ",data
+            
         # SET_PID_GAINS
         elif type == command.SET_PID_GAINS:
-            print "Set PID gains"
             gains = unpack(pattern, data)
-            print gains
-            shared.motor_gains_set = True 
-        # SET_STEERING_GAINS
-        elif type == command.SET_STEERING_GAINS:
-            print "Set Steering gains"
-            gains = unpack(pattern, data)
-            print gains
-            shared.steering_gains_set = True
-        # GET_IMU_LOOP_ZGYRO
-        elif type == command.GET_IMU_LOOP_ZGYRO:
-            pp = 2;
-            print "Z Gyro Data Packet"
-            datum = unpack(pattern, data)
-            if (datum[0] != -1):
-                for i in range(pp):
-                    shared.imudata.append(datum[4*i:4*(i+1)] )
+            print "Set motor gains to ", gains
+            for r in shared.ROBOTS:
+                if r.DEST_ADDR_int == src_addr:
+                    r.motor_gains_set = True
+        
         # FLASH_READBACK
         elif type == command.FLASH_READBACK:
-            shared.pkts = shared.pkts + 1
+            #shared.pkts = shared.pkts + 1
             #print "Special Telemetry Data Packet, ",shared.pkts
             datum = unpack(pattern, data)
             datum = list(datum)
-            telem_index = datum.pop(0)
-            print "Special Telemetry Data Packet #", telem_index, '\r',
-            # print datum
-            if (datum[0] != -1) and (telem_index) >= 0: #valid index
-                shared.imudata[telem_index] = datum
-                shared.bytesIn = shared.bytesIn + (5*4 + 11*2)
+            telem_index = datum.pop(0) #pop removes this from data array
+            #print "Special Telemetry Data Packet #",telem_index
+            #print datum
+            if (datum[0] != -1) and (telem_index) >= 0:
+                for r in shared.ROBOTS:
+                    if r.DEST_ADDR_int == src_addr:
+                        if telem_index <= r.numSamples:
+                            r.telemtryData[telem_index] = datum
+                        else:
+                            print "Got out of range telem_index =",telem_index
+        
         # ERASE_SECTORS
         elif type == command.ERASE_SECTORS:
             datum = unpack(pattern, data)
-            #if datum[0] == 0:
-            #    shared.flash_erased = True
-            shared.flash_erased = datum[0]
+            print "Erased flash for", datum[0], " samples."
+            if datum[0] != 0:
+                for r in shared.ROBOTS:
+                    if r.DEST_ADDR_int == src_addr:
+                        r.flash_erased = datum[0] 
+            
         # SLEEP
         elif type == command.SLEEP:
             datum = unpack(pattern, data)
@@ -119,22 +123,25 @@ def xbee_received(packet):
                 shared.awake = True;
         # ZERO_POS
         elif type == command.ZERO_POS:
-            print 'Hall zeros established; Previous motor positions:',
+            print 'AMS zeros established; Previous motor positions:',
             motor = unpack(pattern,data)
             print motor
+            
         # SET_VEL_PROFILE
         elif (type == command.SET_VEL_PROFILE):
             print "Set Velocity Profile readback:"
             temp = unpack(pattern, data)
             print temp
+            
         # WHO_AM_I
         elif (type == command.WHO_AM_I):
-            #print "whoami:",status, hex(type), data
-            print "whoami:",data
-            shared.robotQueried = True
-        else:    
-            pass
-    
+            print "query : ",data
+            for r in shared.ROBOTS:
+                if r.DEST_ADDR_int == src_addr:
+                    r.robot_queried = True 
+
+    except KeyboardInterrupt:
+        print "\nRecieved Ctrl+C in callbackfunc, exiting."
     except Exception as args:
         print "\nGeneral exception from callbackfunc:",args
         print "\n    ******    TRACEBACK    ******    "
@@ -144,5 +151,3 @@ def xbee_received(packet):
         shared.xb.halt()
         shared.ser.close()
         sys.exit()
-
-

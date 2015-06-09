@@ -74,7 +74,7 @@
 * Return Value  : success indicator - 0 for failed, 1 for succeeded
 *****************************************************************************/
 unsigned char test_radio(unsigned char type, unsigned char status,\
-                         unsigned char length, unsigned char* data)
+                         unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     MacPacket packet;
     Payload pld;
@@ -82,7 +82,7 @@ unsigned char test_radio(unsigned char type, unsigned char status,\
     // Get a new packet from the pool
     packet = radioRequestPacket(length);
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR); //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr); //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
@@ -110,7 +110,7 @@ unsigned char test_radio(unsigned char type, unsigned char status,\
 * Return Value  : success indicator - 0 for failed, 1 for succeeded
 *****************************************************************************/
 unsigned char test_gyro(unsigned char type, unsigned char status,\
-                         unsigned char length, unsigned char* data)
+                         unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     /*
     int i;
@@ -142,7 +142,7 @@ unsigned char test_gyro(unsigned char type, unsigned char status,\
 * Return Value  : success indicator - 0 for failed, 1 for succeeded
 *****************************************************************************/
 unsigned char test_accel(unsigned char type, unsigned char status,\
-                         unsigned char length, unsigned char* data)
+                         unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     /*
     MacPacket packet;
@@ -192,7 +192,7 @@ unsigned char test_accel(unsigned char type, unsigned char status,\
 * Return Value  : success indicator - 0 for failed, 1 for succeeded
 *****************************************************************************/
 unsigned char test_dflash(unsigned char type, unsigned char status,
-                          unsigned char length, unsigned char* data)
+                          unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     MacPacket packet;
     Payload pld;
@@ -217,7 +217,7 @@ unsigned char test_dflash(unsigned char type, unsigned char status,
     // Get a new packet from the pool
     packet = radioRequestPacket(strlen(str1));
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR); //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr); //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
@@ -240,7 +240,7 @@ unsigned char test_dflash(unsigned char type, unsigned char status,
     // Get a new packet from the pool
     packet = radioRequestPacket(strlen(str2));
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR); //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr); //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
@@ -263,7 +263,7 @@ unsigned char test_dflash(unsigned char type, unsigned char status,
     // Get a new packet from the pool
     packet = radioRequestPacket(strlen(str3));
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR); //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr); //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
@@ -287,7 +287,7 @@ unsigned char test_dflash(unsigned char type, unsigned char status,
     // Get a new packet from the pool
     packet = radioRequestPacket(strlen(str4));
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR);  //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr);  //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
@@ -324,7 +324,7 @@ unsigned char test_dflash(unsigned char type, unsigned char status,
 *****************************************************************************/
 
 unsigned char test_motor(unsigned char type, unsigned char status, \
-                          unsigned char length, unsigned char* data)
+                          unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     /*
     Payload pld;
@@ -394,7 +394,7 @@ unsigned char test_motor(unsigned char type, unsigned char status, \
 }
 
 unsigned char test_sma(unsigned char type, unsigned char status, \
-                          unsigned char length, unsigned char* data)
+                          unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     /*
     WordVal dest_addr;
@@ -442,7 +442,7 @@ unsigned char test_sma(unsigned char type, unsigned char status, \
 }
 
 unsigned char test_mpu(unsigned char type, unsigned char status, \
-                          unsigned char length, unsigned char* data)
+                          unsigned char length, unsigned char* data, unsigned int src_addr)
 {
     MacPacket packet;
     Payload pld;
@@ -457,7 +457,7 @@ unsigned char test_mpu(unsigned char type, unsigned char status, \
 
     packet = radioRequestPacket(14);
     if(packet == NULL) return 0;
-    macSetDestAddr(packet, RADIO_DST_ADDR); //TODO: Robot should respond to source of query, not hardcoded address
+    macSetDestAddr(packet, src_addr); //TODO: Robot should respond to source of query, not hardcoded address
 
     // Prepare the payload
     pld = packet->payload;
