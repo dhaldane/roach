@@ -73,6 +73,7 @@
 #include "uart_driver.h"
 #include "ppool.h"
 #include "carray.h"
+#include "tail_ctrl.h"
 
 
 static Payload rx_payload;
