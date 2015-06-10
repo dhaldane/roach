@@ -121,6 +121,8 @@ int main() {
     adcSetup();
     pidSetup();
 
+    tailCtrlSetup();
+
 
 
     LED_1 = 0;

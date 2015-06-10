@@ -4,15 +4,20 @@
  * Date: 6/10/2015
  * Author: DWH
  */
-#include "ports.h"
+#include "tail_ctrl.h"
+#include "led.h"
+#include "mpu6000.h"
+#include "timer.h"
 
-#define GYRO_LSB2_DEG (0.000133231241*8)
+
+#define GYRO_LSB2_DEG (0.061035156) // +-2000 deg/s in 16 bits
 
 static volatile unsigned char interrupt_count = 0;
 static float body_angle = 0;
 
 void tailCtrlSetup(){
     SetupTimer5();
+    EnableIntT5;
 
 }
 
@@ -25,21 +30,24 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         // Do signal processing on gyro
         int gdata[3];   //gyrodata
         mpuGetGyro(gdata);
-
-        body_angle += GYRO_LSB2_DEG*gdata[3]*0.001;
-
+        body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
     }
-    
     if(interrupt_count == 5) 
     {
-        // Update control parameters
         interrupt_count = 0;
+        // Update control parameters
+        if(body_angle > 90.0){
+            LED_1 = 1;
+        } else{
+            LED_1 = 0;
+        }
     }
+    _T5IF = 0;
 
 }
 
 
-static void SetupTimer5() {
+void SetupTimer5() {
     ///// Timer 5 setup, Steering ISR, 300Hz /////
     // period value = Fcy/(prescale*Ftimer)
     unsigned int T5CON1value, T5PERvalue;
