@@ -8,42 +8,78 @@
 #include "led.h"
 #include "mpu6000.h"
 #include "timer.h"
+#include "ports.h"
+#include "pid-ip2.5.h"
 
 
 #define GYRO_LSB2_DEG (0.061035156) // +-2000 deg/s in 16 bits
+#define hall_sense PORTBbits.RB3
 
 static volatile unsigned char interrupt_count = 0;
+static volatile unsigned char jump_flag = 0;
 static float body_angle = 0;
+static float body_angle_setpoint = 0;
+static int interval[NUM_VELS];
+static long mid_pt = 0;
+
+extern pidPos pidObjs[NUM_PIDS];
+
 
 void tailCtrlSetup(){
+    int i;
+    for(i=0; i<NUM_VELS; i++){
+        interval[i] = 2; //2 ms duration for in
+    }
+    initPIDObjPos( &(pidObjs[0]), 1800,200,100,0,0);
     SetupTimer5();
     EnableIntT5;
 
+    pidObjs[0].timeFlag = 0;
+    pidObjs[0].mode = 0;
+    pidSetInput(0, 0);
+    pidObjs[0].p_input = pidObjs[0].p_state;
+    pidOn(0);
+    pidOn(1);
+
 }
 
-///////        Telemtry ISR          ////////
+///////        Tail control ISR          ////////
 //////  Installed to Timer5 @ 1000hz  ////////
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
     interrupt_count++;
+    
 
     if(interrupt_count <= 5) {
         // Do signal processing on gyro
-        int gdata[3];   //gyrodata
+        int gdata[3];   
         mpuGetGyro(gdata);
         body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
+
+        if (hall_sense == 1){
+            jump_flag = 1;
+            body_angle_setpoint = body_angle;
+        }
     }
     if(interrupt_count == 5) 
     {
         interrupt_count = 0;
         // Update control parameters
-        if(body_angle > 90.0){
+        int delta[NUM_VELS], vel[NUM_VELS];
+
+        if(hall_sense == 1){
             LED_1 = 1;
-        } else{
+            // Control to set position
+            pidObjs[0].p_input = mid_pt;
+        } else {
             LED_1 = 0;
+            // Control pitch
+            setPIDVelProfile(0, interval, delta, vel, 0);
+            checkSwapBuff(0);
+
         }
     }
-    _T5IF = 0;
 
+    _T5IF = 0;
 }
 
 
