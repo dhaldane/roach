@@ -21,8 +21,8 @@ static float body_angle = 0;
 static float body_angle_setpoint = 0;
 static int interval[NUM_VELS];
 static long mid_pt = 0;
-static long uppr_bnd = 32000;
-static long lower_bnd = -32000;
+static long uppr_bnd = 28000;
+static long lower_bnd = -28000;
 
 extern pidPos pidObjs[NUM_PIDS];
 
@@ -76,7 +76,7 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
             LED_1 = 0;
             // Control pitch
             long c_pos;
-            c_pos = 1000.0*(body_angle_setpoint - body_angle) - mid_pt;
+            c_pos = 333.0*(body_angle - body_angle_setpoint) - mid_pt;
             if(c_pos > uppr_bnd) {c_pos = uppr_bnd;}
             if(c_pos < lower_bnd) {c_pos = lower_bnd;}
             pidObjs[0].p_input = c_pos;
