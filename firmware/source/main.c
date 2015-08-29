@@ -59,6 +59,7 @@
 #include "radio.h"
 #include "tih.h"
 #include "ams-enc.h"
+#include "as5047.h"
 #include "settings.h"
 #include "tests.h" // TODO (fgb) : define/includes need to live elsewhere
 #include "dfmem.h"
@@ -113,7 +114,8 @@ int main() {
 
     // Need delay for encoders to be ready
     delay_ms(100);
-    amsEncoderSetup();
+//    amsEncoderSetup();
+    asSetup();
     mpuSetup();
     tiHSetup();
     dfmemSetup();
