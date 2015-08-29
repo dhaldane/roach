@@ -159,7 +159,7 @@ void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff)
     pid->Kd = Kd;
     pid->Kaw = Kaw; 
 	pid->feedforward = 0;
-  pid->output = 0;
+    pid->output = 0;
     pid->onoff = 0;
 	pid->p_error = 0;
 	pid->v_error = 0;
