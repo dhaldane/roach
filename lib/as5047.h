@@ -37,9 +37,16 @@
 #ifndef __AS5047_H
 #define __AS5047_H
 
-
 // Setup device, chip select set in BSP header
 void asSetup(void);
+
+// Update position in motor encoder struct
+void as5047EncoderUpdatePos(void);
+
+void setMotMin(int min);
+int getMotMin();
+void setMotMax(int Max);
+int getMotMax();
 
 
 #endif // __AS5047_H

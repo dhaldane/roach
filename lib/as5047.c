@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  *
- * Austria Microsystems AS5047P Driver
+ * Austria Microsystems AS5047P/AMC Driver
  *
  * by Duncan Haldane
  *
@@ -41,19 +41,21 @@
 #include "as5047.h"
 #include "ports.h"
 #include "spi.h"
+#include "tih.h"
 #include "spi_controller.h"
+#include "ams-enc.h"
 #include "utils.h"
 #include <string.h>
 
 // Read/Write Access
 #define READ (16384)
 #define WRITE (0)
+#define ANGLE_REG 0x3FFE
 
+#define MOT_OFFSET 2228
+EncObj motPos;
 
-#define UPDATE_SIZE (1)
-#define UPDATE_TIMEOUT (1000)
-
-
+int motMin, motMax;
 
 /*-----------------------------------------------------------------------------
  * Declaration of static functions
@@ -71,10 +73,9 @@ static inline void setupSPI();
 // Note to self: FIFO State change requires power cycle!
 
 void asSetup(void) {
-  unsigned short zpos = 2228; //est. 8/6/2015 1773
+  unsigned short zpos = MOT_OFFSET; //est. 8/6/2015 1773
   unsigned short zhold;
   _LATB1 = 1;
-  delay_ms(100);
   // setup SPI port
   setupSPI();  // Setup SPI for register configuration
 
@@ -87,7 +88,43 @@ void asSetup(void) {
   writeReg(0x0016, zhold);
   zhold = zpos & 0x003F; //6 LSB of zero position
   writeReg(0x0017, zhold);
-  delay_ms(100);
+  motMin = -1000;
+  motMax = 4000;
+  tiHChangeMode(1, TIH_MODE_BRAKE);
+}
+
+void setMotMin(int min){
+  motMin = min;
+}
+
+int getMotMin(){
+  return motMin;
+}
+
+void setMotMax(int Max){
+  motMax = Max;
+}
+
+int getMotMax(){
+  return motMax;
+}
+
+
+
+void as5047EncoderUpdatePos(void) {
+    unsigned int new_pos;
+    new_pos = readReg(ANGLE_REG) & 0x3FFF;
+    unsigned int prev_pos = motPos.pos;
+    if (new_pos > prev_pos) {
+        if( (new_pos-prev_pos) > MAX_HALL/2 ) {//Subtract one Rev count if diff > 180
+            motPos.oticks--;
+        }
+    } else {
+        if( (prev_pos-new_pos) > MAX_HALL/2 ) {//Add one Rev count if -diff > 180
+            motPos.oticks++;
+        }
+    }
+    motPos.pos = new_pos;
 }
 
 

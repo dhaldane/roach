@@ -18,13 +18,15 @@
 static volatile unsigned char interrupt_count = 0;
 static volatile unsigned char jump_flag = 0;
 static float body_angle = 0;
-static float body_angle_setpoint = 0;
 static int interval[NUM_VELS];
 static long mid_pt = 0;
 static long uppr_bnd = 28000;
 static long lower_bnd = -28000;
 
 extern pidPos pidObjs[NUM_PIDS];
+
+char pitchControlFlag;
+float pitchSetpoint;
 
 
 void tailCtrlSetup(){
@@ -35,6 +37,7 @@ void tailCtrlSetup(){
     initPIDObjPos( &(pidObjs[0]), 1800,200,100,0,0);
     SetupTimer5();
     EnableIntT5;
+    pitchControlFlag = 0;
 
     pidObjs[0].timeFlag = 0;
     pidObjs[0].mode = 0;
@@ -43,6 +46,10 @@ void tailCtrlSetup(){
     pidOn(0);
     pidOn(1);
 
+}
+
+void setPitchContorlFlag(char state){
+    pitchControlFlag = state;
 }
 
 ///////        Tail control ISR          ////////
@@ -57,9 +64,9 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         mpuGetGyro(gdata);
         body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
 
-        if (hall_sense == 1){
+        if (pitchControlFlag == 1){
             jump_flag = 1;
-            body_angle_setpoint = body_angle;
+            pitchSetpoint = body_angle;
         }
     }
     if(interrupt_count == 5) 
@@ -76,7 +83,7 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
             LED_1 = 0;
             // Control pitch
             long c_pos;
-            c_pos = 333.0*(body_angle - body_angle_setpoint) - mid_pt;
+            c_pos = 333.0*(body_angle - pitchSetpoint) - mid_pt;
             if(c_pos > uppr_bnd) {c_pos = uppr_bnd;}
             if(c_pos < lower_bnd) {c_pos = lower_bnd;}
             pidObjs[0].p_input = c_pos;

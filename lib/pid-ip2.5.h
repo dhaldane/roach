@@ -71,7 +71,7 @@ typedef struct
 } pidVelLUT;
 
 //Functions
-void UpdatePID(pidPos *pid);
+void UpdatePID(pidPos *pid, int num);
 void pidSetup();
 void initPIDVelProfile();
 void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel, int onceFlag);

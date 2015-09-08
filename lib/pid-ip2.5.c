@@ -28,6 +28,11 @@
 #include <stdlib.h> // for malloc
 #include "init.h"  // for Timer1
 
+#include "as5047.h"
+
+long min_pos = -3000;
+long max_pos = 15000;
+
 
 #define MC_CHANNEL_PWM1     1
 #define MC_CHANNEL_PWM2     2
@@ -327,6 +332,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     if(interrupt_count == 4) {
         mpuBeginUpdate();
         amsEncoderStartAsyncRead();
+        as5047EncoderUpdatePos();
     }
     //PID controller update
     else if(interrupt_count == 5)
@@ -353,28 +359,12 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                 }
             }
         }
-        if (pidObjs[0].mode == 0)
-        {
-        pidSetControl();
+        if (pidObjs[0].mode == 0){
+            pidSetControl();
         } else if (pidObjs[0].mode == 1)
         {
             tiHSetDC(1, pidObjs[0].pwmDes);
             tiHSetDC(2, pidObjs[1].pwmDes);
-        }
-
-        if(pidObjs[0].onoff) {
-            //telemGetPID();
-//            telemSaveNow();
-            //TODO: Telemetry save should not be tied to the on/off state of the PID controller. Removed for now. needs to be checked. (ronf, pullin, dhaldane)
-
-            // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
-            // if(uart_tx_packet != NULL) {
-            //     //time|Left pstate|Right pstate|Commanded Left pstate| Commanded Right pstate|DCR|DCL|RBEMF|LBEMF|Gyrox|Gyroy|Gyroz|Ax|Ay|Az
-            //     //bytes: 4,4,4,4,4,2,2,2,2,2,2,2,2,2,2
-            //     paySetType(uart_tx_packet->payload, CMD_PID_TELEMETRY);
-            //     paySetStatus(uart_tx_packet->payload, 0);
-            //     paySetData(uart_tx_packet->payload, sizeof(telemStruct_t), (unsigned char *) &telemPIDdata);
-            //     uart_tx_flag = 1;
         }
     }
     LED_3 = 0;
@@ -530,7 +520,7 @@ void pidSetControl()
         	pidObjs[j].p_error = pidObjs[j].p_input + pidObjs[j].interpolate  - pidObjs[j].p_state;
             pidObjs[j].v_error = pidObjs[j].v_input - pidObjs[j].v_state;  // v_input should be revs/sec
             //Update values
-            UpdatePID(&(pidObjs[j]));
+            UpdatePID(&(pidObjs[j]),j);
        } // end of for(j)
 
 		if(pidObjs[0].onoff && pidObjs[1].onoff)  // both motors on to run
@@ -542,8 +532,9 @@ void pidSetControl()
 		{ tiHSetDC(1,0); tiHSetDC(2,0); }	
 }
 
+extern EncObj motPos;
 
-void UpdatePID(pidPos *pid)
+void UpdatePID(pidPos *pid, int num)
 {
     pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
     pid->i = (long)pid->Ki  * pid->i_error >>12 ;
@@ -558,20 +549,45 @@ void UpdatePID(pidPos *pid)
 /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
     scale p_error by 16, so get 12 bit angle value*/
 	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
-	if (pid->preSat > MAXTHROT) 
-	{ 	      pid->output = MAXTHROT; 
-			pid->i_error = (long) pid->i_error + 
-				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
-				/ ((long)GAIN_SCALER);		
-	}      
-	if (pid->preSat < -MAXTHROT)
-      { 	      pid->output = -MAXTHROT; 
-			pid->i_error = (long) pid->i_error + 
-				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
-				/ ((long)GAIN_SCALER);		
-	}      
+    if(num==0){
+    	if (pid->preSat > MAXTHROT) 
+    	{ 	      pid->output = MAXTHROT; 
+    			pid->i_error = (long) pid->i_error + 
+    				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
+    				/ ((long)GAIN_SCALER);		
+    	}      
+    	if (pid->preSat < -MAXTHROT)
+          { 	      pid->output = -MAXTHROT; 
+    			pid->i_error = (long) pid->i_error + 
+    				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
+    				/ ((long)GAIN_SCALER);		
+    	}
+    } else if(num==1){ // BLDC motor
+        int max = getMotMax();
+        int min = getMotMin();
+        long pos = (motPos.oticks << 14) + (long)(motPos.pos);
+        if(pos<min_pos && pid->preSat < 0){
+            pid->output = 0;
+        }
+        if(pos>max_pos && pid->preSat > 0){
+            pid->output = 0;
+        }
+        if (pid->preSat > max) 
+        {       pid->output = max; 
+                pid->i_error = (long) pid->i_error + 
+                    (long)(pid->Kaw) * ((long)(max) - (long)(pid->preSat)) 
+                    / ((long)GAIN_SCALER);      
+        }      
+        if (pid->preSat < -min)
+          {     pid->output = -min; 
+                pid->i_error = (long) pid->i_error + 
+                    (long)(pid->Kaw) * ((long)(min) - (long)(pid->preSat)) 
+                    / ((long)GAIN_SCALER);      
+        }
+    }   
 }
 
 

@@ -114,8 +114,9 @@ int main() {
 
     // Need delay for encoders to be ready
     delay_ms(100);
-//    amsEncoderSetup();
+    amsEncoderSetup();
     asSetup();
+    
     mpuSetup();
     tiHSetup();
     dfmemSetup();
@@ -123,7 +124,7 @@ int main() {
     adcSetup();
     pidSetup();
 
-    tailCtrlSetup();
+//    tailCtrlSetup();
 
 
 
