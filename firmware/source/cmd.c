@@ -82,6 +82,12 @@ void cmdSetup(void) {
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
 
+    cmd_func[CMD_SET_TAIL_POS] = &cmdSetTailPos;
+    cmd_func[CMD_SET_PITCH_SET] = &cmdSetPitchSetpoint;
+    cmd_func[CMD_RESET_BODY_ANG] = &cmdresetBodyAngle;
+    cmd_func[CMD_SET_CURRENT_LIMITS] = &cmdSetCurrentLimits;
+    cmd_func[CMD_SET_MOTOR_POS] = &cmdSetMotorPos;
+
 }
 
 void cmdPushFunc(MacPacket rx_packet) {
@@ -130,6 +136,49 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
             sizeof(motor_count), (unsigned char *)motor_count, 0);
     return 1;
 }
+// ==== Jumper Commands ==============================================================================
+// =============================================================================================================
+#include "tail_ctrl.h"
+#include "as5047.h"
+
+unsigned char cmdSetTailPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    int pos = frame[0] + (frame[1] << 8);
+    setPitchContorlFlag(0);
+    setTailAngle((long)(pos<<2));
+}
+
+unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    int pos = frame[0] + (frame[1] << 8);
+    setPitchContorlFlag(1);
+    setPitchSetpoint(int pos);
+}
+
+unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    resetBodyAngle((long)(pos<<2));
+}
+
+unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    long pos = 0, 
+    int relative_flag = frame[4] + (frame[5] << 8);
+    int i;
+    for (i = 0; i < 4; i++)
+    {
+        pos += (frame[i] << 8*i );
+    }
+    if (relative_flag){
+        p_input[1] = p_input[1] + pos;
+    } else {
+        p_input = pos;
+    }
+}
+
+unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    int max = frame[0] + (frame[1] << 8);
+    int min = frame[2] + (frame[3] << 8);
+    setMotMax(max);
+    setMotMin(min);
+}
+
 // ==== Flash/Experiment Commands ==============================================================================
 // =============================================================================================================
 unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
