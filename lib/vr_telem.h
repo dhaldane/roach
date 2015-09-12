@@ -5,10 +5,11 @@
 // Data structure type
 
 typedef struct {
-    int32_t posL; // Hall angle position
-    int32_t posR;
-    int32_t composL; // Commanded Hall angle position
-    int32_t composR;
+    int32_t posMotor; // Hall angle position
+    int32_t posKnee;
+    int32_t posTail;
+    int32_t composTail; // Commanded Hall angle position
+    int32_t composMotor;
     int16_t dcL; // PWM duty cycle
     int16_t dcR;
     int16_t gyroX;
@@ -17,9 +18,6 @@ typedef struct {
     int16_t accelX;
     int16_t accelY;
     int16_t accelZ;
-    int16_t bemfL;
-    int16_t bemfR;
-    int16_t Vbatt; // battery voltage
 } vrTelemStruct_t;
 
 //void vrTelemGetData(unsigned char* ptr);

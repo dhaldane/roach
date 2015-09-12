@@ -22,6 +22,8 @@
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
 
+extern EncObj motPos;
+
 //void vrTelemGetData(unsigned char* ptr) {
 void vrTelemGetData(vrTelemStruct_t* ptr) {
     
@@ -35,14 +37,13 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     mpuGetXl(xldata);
 
     //Motion control
-    ptr->posL = pidObjs[0].p_state;
-    ptr->posR = pidObjs[1].p_state;
-    ptr->composL = pidObjs[0].p_input + pidObjs[0].interpolate;
-    ptr->composR = pidObjs[1].p_input + pidObjs[1].interpolate;
+    ptr->posTail = pidObjs[0].p_state;
+    ptr->posKnee = (long)(encPos[1].pos << 2)+ (encPos[1].oticks << 16;
+    ptr->posMotor = (motPos.oticks << 16) + (long)(motPos.pos << 2);
+    ptr->composTail = pidObjs[0].p_input + pidObjs[0].interpolate;
+    ptr->composMotor = pidObjs[1].p_input + pidObjs[1].interpolate;
     ptr->dcL = pidObjs[0].output; // left
     ptr->dcR = pidObjs[1].output; // right
-    ptr->bemfL = bemf[0];
-    ptr->bemfR = bemf[1];
 
     //gyro and XL
     ptr->gyroX = gdata[0];
@@ -51,9 +52,6 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     ptr->accelX = xldata[0];
     ptr->accelY = xldata[1];
     ptr->accelZ = xldata[2];
-
-    //Battery
-    ptr->Vbatt = (int) adcGetVbatt();
 }
 
 //This may be unneccesary, since the telemtry type isn't totally anonymous
