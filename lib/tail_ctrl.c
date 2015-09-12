@@ -13,13 +13,11 @@
 
 
 #define GYRO_LSB2_DEG (0.061035156) // +-2000 deg/s in 16 bits
-#define hall_sense PORTBbits.RB3
 
 static volatile unsigned char interrupt_count = 0;
-static volatile unsigned char jump_flag = 0;
-static float body_angle = 0;
+float body_angle = 0;
 static int interval[NUM_VELS];
-static long mid_pt = 0;
+long set_pt = 0;
 static long uppr_bnd = 28000;
 static long lower_bnd = -28000;
 
@@ -38,6 +36,7 @@ void tailCtrlSetup(){
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
+    pitchControlSetpoint = 0;
 
     pidObjs[0].timeFlag = 0;
     pidObjs[0].mode = 0;
@@ -52,6 +51,19 @@ void setPitchContorlFlag(char state){
     pitchControlFlag = state;
 }
 
+void setTailAngle(long pos){
+    set_pt = pos;
+}
+
+void setPitchSetpoint(int setpoint){
+    float pAng;
+    pAng = 360.0 / 2^15 * (float) setpoint;
+}
+
+void resetBodyAngle(){
+    body_angle = 0;
+}
+
 ///////        Tail control ISR          ////////
 //////  Installed to Timer5 @ 1000hz  ////////
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
@@ -64,10 +76,6 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         mpuGetGyro(gdata);
         body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
 
-        if (pitchControlFlag == 1){
-            jump_flag = 1;
-            pitchSetpoint = body_angle;
-        }
     }
     if(interrupt_count == 5) 
     {
@@ -75,20 +83,18 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         // Update control parameters
         int delta[NUM_VELS], vel[NUM_VELS];
 
-        if(hall_sense == 1){
+        if(pitchControlFlag == 0){
             LED_1 = 1;
             // Control to set position
-            pidObjs[0].p_input = mid_pt;
+            pidObjs[0].p_input = set_pt;
         } else {
             LED_1 = 0;
             // Control pitch
             long c_pos;
-            c_pos = 333.0*(body_angle - pitchSetpoint) - mid_pt;
+            c_pos = 333.0*(body_angle - pitchSetpoint); // Set zero to midpoint of stroke
             if(c_pos > uppr_bnd) {c_pos = uppr_bnd;}
             if(c_pos < lower_bnd) {c_pos = lower_bnd;}
             pidObjs[0].p_input = c_pos;
-
-
         }
     }
 
