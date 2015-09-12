@@ -1,5 +1,5 @@
 void SetupTimer5();
-void setPitchContorlFlag();
+void setPitchContorlFlag(char state);
 void setTailAngle(long pos);
 void tailCtrlSetup();
 void resetBodyAngle();

@@ -39,6 +39,13 @@ static unsigned char cmdNop(unsigned char type, unsigned char status, unsigned c
 static unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
+//Jumper functions
+static unsigned char cmdSetTailPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -145,20 +152,23 @@ unsigned char cmdSetTailPos(unsigned char type, unsigned char status, unsigned c
     int pos = frame[0] + (frame[1] << 8);
     setPitchContorlFlag(0);
     setTailAngle((long)(pos<<2));
+    return 1;
 }
 
 unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     int pos = frame[0] + (frame[1] << 8);
     setPitchContorlFlag(1);
-    setPitchSetpoint(int pos);
+    setPitchSetpoint(pos);
+    return 1;
 }
 
 unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    resetBodyAngle((long)(pos<<2));
+    resetBodyAngle();
+    return 1;
 }
 
 unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    long pos = 0, 
+    long pos = 0;
     int relative_flag = frame[4] + (frame[5] << 8);
     int i;
     for (i = 0; i < 4; i++)
@@ -166,10 +176,11 @@ unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned 
         pos += (frame[i] << 8*i );
     }
     if (relative_flag){
-        p_input[1] = p_input[1] + pos;
+        pidObjs[1].p_input += pos;
     } else {
-        p_input = pos;
+        pidObjs[1].p_input = pos;
     }
+    return 1;
 }
 
 unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
@@ -177,6 +188,7 @@ unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsi
     int min = frame[2] + (frame[3] << 8);
     setMotMax(max);
     setMotMin(min);
+    return 1;
 }
 
 // ==== Flash/Experiment Commands ==============================================================================

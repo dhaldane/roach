@@ -36,7 +36,7 @@ void tailCtrlSetup(){
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
-    pitchControlSetpoint = 0;
+    pitchSetpoint = 0;
 
     pidObjs[0].timeFlag = 0;
     pidObjs[0].mode = 0;
@@ -57,7 +57,8 @@ void setTailAngle(long pos){
 
 void setPitchSetpoint(int setpoint){
     float pAng;
-    pAng = 360.0 / 2^15 * (float) setpoint;
+    pAng = 360.0 / 32768.0 * (float) setpoint;
+    pitchSetpoint = pAng;
 }
 
 void resetBodyAngle(){
@@ -80,8 +81,6 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
     if(interrupt_count == 5) 
     {
         interrupt_count = 0;
-        // Update control parameters
-        int delta[NUM_VELS], vel[NUM_VELS];
 
         if(pitchControlFlag == 0){
             LED_1 = 1;

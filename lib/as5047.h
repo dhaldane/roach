@@ -29,7 +29,7 @@
  *
  * Austria Microsystems AS5047P Driver
  *
- * by Richard J. Sheperd
+ * by Duncan
  *
  * v.alpha
  */
