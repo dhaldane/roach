@@ -22,7 +22,6 @@
 #define CMD_SET_PHASE               0x93         
 #define CMD_SET_MOTOR_MODE          0x94
 
-#define CMD_SET_TAIL_POS            0x95
 #define CMD_SET_PITCH_SET           0x96
 #define CMD_RESET_BODY_ANG          0x97
 #define CMD_SET_CURRENT_LIMITS      0x98

@@ -40,7 +40,6 @@ static unsigned char cmdWhoAmI(unsigned char type, unsigned char status, unsigne
 static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Jumper functions
-static unsigned char cmdSetTailPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -89,7 +88,6 @@ void cmdSetup(void) {
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
 
-    cmd_func[CMD_SET_TAIL_POS] = &cmdSetTailPos;
     cmd_func[CMD_SET_PITCH_SET] = &cmdSetPitchSetpoint;
     cmd_func[CMD_RESET_BODY_ANG] = &cmdresetBodyAngle;
     cmd_func[CMD_SET_CURRENT_LIMITS] = &cmdSetCurrentLimits;
@@ -148,16 +146,9 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 #include "tail_ctrl.h"
 #include "as5047.h"
 
-unsigned char cmdSetTailPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    int pos = frame[0] + (frame[1] << 8);
-    setPitchContorlFlag(0);
-    setTailAngle((long)(pos<<2));
-    return 1;
-}
-
 unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     int pos = frame[0] + (frame[1] << 8);
-    setPitchContorlFlag(1);
+    setPitchControlFlag(1);
     setPitchSetpoint(pos);
     return 1;
 }
