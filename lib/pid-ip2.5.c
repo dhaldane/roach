@@ -29,6 +29,8 @@
 #include "init.h"  // for Timer1
 
 #include "as5047.h"
+#include "tail_ctrl.h"
+
 
 long min_pos = -3000;
 long max_pos = 15000;
@@ -417,6 +419,7 @@ void checkSwapBuff(int j){
 #define VEL_BEMF 0
 
 /* update state variables including motor position and velocity */
+extern long body_angle;
 
 void pidGetState()
 {   int i;
@@ -447,7 +450,7 @@ void pidGetState()
 		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
 		if (i==0)
 		{
-			pidObjs[i].p_state = p_state; //fix for encoder alignment
+			pidObjs[i].p_state = body_angle; //fix for encoder alignment
 		}
 		else
 		{
@@ -464,8 +467,11 @@ void pidGetState()
 	{	velocity = pidObjs[i].p_state - oldpos[i];  // Encoder ticks per ms
 	    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
 		if(velocity < -0x7fff) velocity = -0x7fff;	
-		pidObjs[i].v_state = (int) velocity;
-	}
+        pidObjs[i].v_state = (int) velocity;
+    }
+    int gdata[3];   
+    mpuGetGyro(gdata);
+	pidObjs[0].v_state = gdata[2];
 #endif
 
  // choose velocity estimate  
@@ -523,13 +529,11 @@ void pidSetControl()
             UpdatePID(&(pidObjs[j]),j);
        } // end of for(j)
 
-		if(pidObjs[0].onoff && pidObjs[1].onoff)  // both motors on to run
-		{
- 		   tiHSetDC(1, pidObjs[0].output); 
-		   tiHSetDC(2, pidObjs[1].output); 
-		} 
-		else // turn off motors if PID loop is off
-		{ tiHSetDC(1,0); tiHSetDC(2,0); }	
+        if(pidObjs[0].onoff) {tiHSetDC(1, pidObjs[0].output); } 
+        else {tiHSetDC(1,0);} // turn off motor if PID loop is off
+
+        if(pidObjs[1].onoff) {tiHSetDC(2, pidObjs[1].output); } 
+		else {tiHSetDC(2,0);} // turn off motor if PID loop is off		
 }
 
 extern EncObj motPos;

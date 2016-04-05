@@ -15,11 +15,10 @@
 #define GYRO_LSB2_DEG (0.061035156) // +-2000 deg/s in 16 bits
 
 static volatile unsigned char interrupt_count = 0;
-float body_angle = 0;
 static int interval[NUM_VELS];
 long set_pt = 0;
-static long uppr_bnd = 28000;
-static long lower_bnd = -28000;
+
+long body_angle;
 
 extern pidPos pidObjs[NUM_PIDS];
 
@@ -32,7 +31,8 @@ void tailCtrlSetup(){
     for(i=0; i<NUM_VELS; i++){
         interval[i] = 2; //2 ms duration for in
     }
-    initPIDObjPos( &(pidObjs[0]), 1800,200,100,0,0);
+    body_angle = 0;
+    initPIDObjPos( &(pidObjs[0]), 1800,0,0,0,0);
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
@@ -43,22 +43,15 @@ void tailCtrlSetup(){
     pidSetInput(0, 0);
     pidObjs[0].p_input = pidObjs[0].p_state;
     pidOn(0);
-    pidOn(1);
-
 }
 
-void setPitchContorlFlag(char state){
+void setPitchControlFlag(char state){
     pitchControlFlag = state;
 }
 
-void setTailAngle(long pos){
-    set_pt = pos;
-}
 
 void setPitchSetpoint(int setpoint){
-    float pAng;
-    pAng = 360.0 / 32768.0 * (float) setpoint;
-    pitchSetpoint = pAng;
+    pitchSetpoint = setpoint;
 }
 
 void resetBodyAngle(){
@@ -75,7 +68,8 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         // Do signal processing on gyro
         int gdata[3];   
         mpuGetGyro(gdata);
-        body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
+        // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
+        body_angle += gdata[2]*0.001;
 
     }
     if(interrupt_count == 5) 
@@ -83,17 +77,14 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         interrupt_count = 0;
 
         if(pitchControlFlag == 0){
-            LED_1 = 1;
-            // Control to set position
-            pidObjs[0].p_input = set_pt;
-        } else {
             LED_1 = 0;
+            // Control/motor off
+            pidObjs[0].onoff = 0;
+        } else {
+            LED_1 = 1;
             // Control pitch
-            long c_pos;
-            c_pos = 333.0*(body_angle - pitchSetpoint); // Set zero to midpoint of stroke
-            if(c_pos > uppr_bnd) {c_pos = uppr_bnd;}
-            if(c_pos < lower_bnd) {c_pos = lower_bnd;}
-            pidObjs[0].p_input = c_pos;
+            pidObjs[0].onoff = 1;
+            pidObjs[0].p_input = pitchSetpoint;
         }
     }
 
