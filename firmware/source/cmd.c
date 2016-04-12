@@ -30,6 +30,7 @@ void cmdError(void);
 
 extern pidPos pidObjs[NUM_PIDS];
 extern EncObj encPos[NUM_ENC];
+extern EncObj motPos;
 extern volatile CircArray fun_queue;
 
 /*-----------------------------------------------------------------------------
@@ -235,6 +236,7 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
 
     tiHSetDC(1, thrust1);
     tiHSetDC(2, thrust2);
+    LED_3 = 1;
     delay_ms(run_time_ms);
     tiHSetDC(1,0);
     tiHSetDC(2,0);

@@ -124,7 +124,7 @@ int main() {
     adcSetup();
     pidSetup();
 
-//    tailCtrlSetup();
+    tailCtrlSetup();
 
 
 
