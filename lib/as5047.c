@@ -48,11 +48,11 @@
 #include <string.h>
 
 // Read/Write Access
-#define READ (16384)
+#define READ (32768)
 #define WRITE (0)
 #define ANGLE_REG 0x3FFE
 
-#define MOT_OFFSET 2228
+#define MOT_OFFSET 16037
 EncObj motPos;
 
 int motMin, motMax;
@@ -81,7 +81,7 @@ void asSetup(void) {
 
   // Write settings
   writeReg(0x0019, 0x001D);
-  writeReg(0x0018, 0x0018);
+  writeReg(0x0018, 0x001C);
 
   // Write zero position
   zhold = zpos >> 6; //8MSB of zero position
@@ -108,7 +108,6 @@ void setMotMax(int Max){
 int getMotMax(){
   return motMax;
 }
-
 
 
 void as5047EncoderUpdatePos(void) {
@@ -168,10 +167,13 @@ static void asFinishUpdate(unsigned int cause) {
 *****************************************************************************/
 static unsigned short readReg(unsigned short regaddr) {
   unsigned short c;
-  regaddr = regaddr | READ;
+  regaddr = regaddr | 1<<14;
   regaddr = regaddr | parity(regaddr);
   spic2BeginTransaction(AMS_CS);
   spic2Transmit16(regaddr);
+  _LATB1 = 1;
+  delay_us(1);
+  _LATB1 = 0;
   c = spic2Receive16();
   spic2EndTransaction();
   return c;
@@ -211,8 +213,8 @@ static inline void setupSPI()
                     SLAVE_ENABLE_OFF &
                     CLK_POL_ACTIVE_HIGH &
                     MASTER_ENABLE_ON &
-                    PRI_PRESCAL_64_1 &
-                    SEC_PRESCAL_1_1);
+                    PRI_PRESCAL_1_1 &
+                    SEC_PRESCAL_6_1);
 
   spic2SetCallback(AMS_CS, &asFinishUpdate);
 }
