@@ -432,87 +432,31 @@ void pidGetState()
 		offsetAccumulatorL += adcGetMotorA();  
 		offsetAccumulatorR += adcGetMotorB();   
 		offsetAccumulatorCounter++; 	}
- 
-// choose velocity estimate  
-#if VEL_BEMF == 0    // use first difference on position for velocity estimate
-	long oldpos[NUM_PIDS], velocity;
-	for(i=0; i<NUM_PIDS; i++)
-	{ oldpos[i] = pidObjs[i].p_state; }
-#endif
-	
-	time_start =  sclockGetTime();
+
+    time_start =  sclockGetTime();
     bemf[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
     bemf[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
-// only works to +-32K revs- might reset after certain number of steps? Should wrap around properly
-	for(i =0; i<NUM_PIDS; i++)
-	{     p_state = (long)(encPos[i].pos << 2);		// pos 14 bits 0x0 -> 0x3fff
-	      p_state = p_state + (encPos[i].oticks << 16);
-		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
-		if (i==0)
-		{
-			pidObjs[i].p_state = body_angle; //fix for encoder alignment
-		}
-		else
-		{
-			pidObjs[i].p_state = -p_state;
-		}
-		
-	}
 
-	time_end = sclockGetTime() - time_start;
+    p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
+    p_state = p_state + (motPos.oticks << 16);
+    p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
+    pidObjs[0].p_state = body_angle; //fix for encoder alignment
+    pidObjs[1].p_state = p_state;
+
+    time_end = sclockGetTime() - time_start;
 
 
-#if VEL_BEMF == 0    // use first difference on position for velocity estimate
-	for(i=0; i<NUM_PIDS; i++)
-	{	velocity = pidObjs[i].p_state - oldpos[i];  // Encoder ticks per ms
-	    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
-		if(velocity < -0x7fff) velocity = -0x7fff;	
-        pidObjs[i].v_state = (int) velocity;
-    }
+    velocity = pidObjs[1].p_state - oldpos[i];  // Encoder ticks per ms
+    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
+    if(velocity < -0x7fff) velocity = -0x7fff;	
+    pidObjs[1].v_state = (int) velocity;
+
     int gdata[3];   
     mpuGetGyro(gdata);
-	pidObjs[0].v_state = gdata[2];
-#endif
+    pidObjs[0].v_state = gdata[2];
+    #endif
 
- // choose velocity estimate  
 
-#if VEL_BEMF == 1
-int measurements[NUM_PIDS];
-// Battery: AN0, MotorA AN8, MotorB AN9, MotorC AN10, MotorD AN11
-	measurements[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
-     	measurements[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
-
-	
-//Get motor speed reading on every interrupt - A/D conversion triggered by PWM timer to read Vm when transistor is off
-// when motor is loaded, sometimes see motor short so that  bemf=offset voltage
-// get zero sometimes - open circuit brush? Hence try median filter
-	for(i = 0; i<2; i++) 	// median filter
-	{	if(measurements[i] > measLast1[i])	
-		{	if(measLast1[i] > measLast2[i]) {bemf[i] = measLast1[i];}  // middle value is median
-			else // middle is smallest
-	     		{ if(measurements[i] > measLast2[i]) {bemf[i] = measLast2[i];} // 3rd value is median
-	        	   else{ bemf[i] = measurements[i];}  // first value is median
-            	}
-      	}           
-		else  // first is not biggest
-		{	if(measLast1[i] < measLast2[i]) {bemf[i] = measLast1[i];}  // middle value is median
-			else  // middle is biggest
-	     		{    if(measurements[i] < measLast2[i]) {bemf[i] = measLast2[i];} // 3rd value is median
-		     		else
-				{ bemf[i] = measurements[i];  // first value is median			 
-				}
-			}
-		}
-	} // end for
-// store old values
-	measLast2[0] = measLast1[0];  measLast1[0] = measurements[0];
-	measLast2[1] = measLast1[1];  measLast1[1] = measurements[1];
-   	pidObjs[0].v_state = bemf[0]; 
-	pidObjs[1].v_state = bemf[1];  //  might also estimate from deriv of pos data
-    //if((measurements[0] > 0) || (measurements[1] > 0)) {
-    if((measurements[0] > 0)) { LED_BLUE = 1;}
-    else{ LED_BLUE = 0;}
-#endif
 }
 
 
@@ -585,8 +529,8 @@ void UpdatePID(pidPos *pid, int num)
                     (long)(pid->Kaw) * ((long)(max) - (long)(pid->preSat)) 
                     / ((long)GAIN_SCALER);      
         }      
-        if (pid->preSat < -min)
-          {     pid->output = -min; 
+        if (pid->preSat < min)
+          {     pid->output = min; 
                 pid->i_error = (long) pid->i_error + 
                     (long)(pid->Kaw) * ((long)(min) - (long)(pid->preSat)) 
                     / ((long)GAIN_SCALER);      
