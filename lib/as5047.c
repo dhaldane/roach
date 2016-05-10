@@ -52,7 +52,7 @@
 #define WRITE (0)
 #define ANGLE_REG 0x3FFE
 
-#define MOT_OFFSET 16037
+#define MOT_OFFSET 2383
 EncObj motPos;
 
 int motMin, motMax;
@@ -73,8 +73,7 @@ static inline void setupSPI();
 // Note to self: FIFO State change requires power cycle!
 
 void asSetup(void) {
-  unsigned short zpos = MOT_OFFSET; //est. 8/6/2015 1773
-  unsigned short zhold;
+
   _LATB1 = 1;
   // setup SPI port
   setupSPI();  // Setup SPI for register configuration
@@ -84,13 +83,21 @@ void asSetup(void) {
   writeReg(0x0018, 0x001C);
 
   // Write zero position
-  zhold = zpos >> 6; //8MSB of zero position
-  writeReg(0x0016, zhold);
-  zhold = zpos & 0x003F; //6 LSB of zero position
-  writeReg(0x0017, zhold);
+  setMotZero(1503);
+  // setMotZero(2383); ???? This was determined value. Check on this
   motMin = -1000;
   motMax = 4000;
   tiHChangeMode(1, TIH_MODE_BRAKE);
+  motPos.offset = 4613;
+}
+
+void setMotZero(unsigned short offs){
+     // Write zero position
+  unsigned short zhold;
+  zhold = offs >> 6; //8MSB of zero position
+  writeReg(0x0016, zhold);
+  zhold = offs & 0x003F; //6 LSB of zero position
+  writeReg(0x0017, zhold);
 }
 
 void setMotMin(int min){

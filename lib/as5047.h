@@ -40,6 +40,8 @@
 // Setup device, chip select set in BSP header
 void asSetup(void);
 
+void setMotZero(unsigned short offs);
+
 // Update position in motor encoder struct
 void as5047EncoderUpdatePos(void);
 

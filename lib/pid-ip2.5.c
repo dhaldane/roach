@@ -32,10 +32,6 @@
 #include "tail_ctrl.h"
 
 
-long min_pos = -3000;
-long max_pos = 15000;
-
-
 #define MC_CHANNEL_PWM1     1
 #define MC_CHANNEL_PWM2     2
 #define MC_CHANNEL_PWM3     3
@@ -95,7 +91,7 @@ void pidSetup()
 	
 	EnableIntT1; // turn on pid interrupts
 
-	calibBatteryOffset(100); //???This is broken for 2.5
+	// calibBatteryOffset(100); //???This is broken for 2.5
 }
 
 
@@ -420,31 +416,20 @@ void checkSwapBuff(int j){
 
 /* update state variables including motor position and velocity */
 extern long body_angle;
-
+extern EncObj motPos;
 void pidGetState()
 {   int i;
-	long p_state; 
-	unsigned long time_start, time_end; 
-//	calib_flag = 0;  //BEMF disable
-// get diff amp offset with motor off at startup time
-	if(calib_flag)
-	{ 	
-		offsetAccumulatorL += adcGetMotorA();  
-		offsetAccumulatorR += adcGetMotorB();   
-		offsetAccumulatorCounter++; 	}
-
-    time_start =  sclockGetTime();
-    bemf[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
-    bemf[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
+    long p_state;
+    long oldpos[NUM_PIDS], velocity;
+    
+    for(i=0; i<NUM_PIDS; i++)
+    { oldpos[i] = pidObjs[i].p_state; }
 
     p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
     p_state = p_state + (motPos.oticks << 16);
     p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
-    pidObjs[0].p_state = body_angle; //fix for encoder alignment
-    pidObjs[1].p_state = p_state;
-
-    time_end = sclockGetTime() - time_start;
-
+    pidObjs[0].p_state = body_angle;
+    pidObjs[1].p_state = -p_state;
 
     velocity = pidObjs[1].p_state - oldpos[i];  // Encoder ticks per ms
     if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
@@ -454,11 +439,11 @@ void pidGetState()
     int gdata[3];   
     mpuGetGyro(gdata);
     pidObjs[0].v_state = gdata[2];
-    #endif
-
-
 }
 
+
+long min_pos = -3000;
+long max_pos = 1114112;
 
 void pidSetControl()
 { int j;
@@ -485,13 +470,13 @@ extern EncObj motPos;
 void UpdatePID(pidPos *pid, int num)
 {
     pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
-    pid->i = (long)pid->Ki  * pid->i_error >>12 ;
-    pid->d=(long)pid->Kd *  (long) pid->v_error;
+    pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
+    pid->d=  (long)pid->Kd *  (long) pid->v_error;
     // better check scale factors
 
     pid->preSat = pid->feedforward + pid->p +
 		 ((pid->i ) >> 4) +  // divide by 16
-		(pid->d >> 4); // divide by 16
+		  (pid->d >> 4); // divide by 16
 	pid->output = pid->preSat;
  
 /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
@@ -514,14 +499,18 @@ void UpdatePID(pidPos *pid, int num)
     				/ ((long)GAIN_SCALER);		
     	}
     } else if(num==1){ // BLDC motor
+        pid->preSat = pid->feedforward + (pid->p ) +
+             ((pid->i ) >> 6) +  // divide by 64
+             (pid->d >> 12); // divide by 64
+        pid->output = pid->preSat;
         int max = getMotMax();
         int min = getMotMin();
-        long pos = (motPos.oticks << 14) + (long)(motPos.pos);
+        long pos = pidObjs[1].p_state;
         if(pos<min_pos && pid->preSat < 0){
-            pid->output = 0;
+            pid->output = 0; LED_1=1;
         }
         if(pos>max_pos && pid->preSat > 0){
-            pid->output = 0;
+            pid->output = 0; LED_2 = 1;
         }
         if (pid->preSat > max) 
         {       pid->output = max; 

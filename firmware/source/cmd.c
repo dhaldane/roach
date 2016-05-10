@@ -45,6 +45,7 @@ static unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char statu
 static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -93,6 +94,7 @@ void cmdSetup(void) {
     cmd_func[CMD_RESET_BODY_ANG] = &cmdresetBodyAngle;
     cmd_func[CMD_SET_CURRENT_LIMITS] = &cmdSetCurrentLimits;
     cmd_func[CMD_SET_MOTOR_POS] = &cmdSetMotorPos;
+    cmd_func[CMD_START_EXP] = &cmdStartExperiment;
 
 }
 
@@ -146,9 +148,22 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 // =============================================================================================================
 #include "tail_ctrl.h"
 #include "as5047.h"
+#include "experiment.h"
+
+
+unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    expStart();
+    return 1;
+}
 
 unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    int pos = frame[0] + (frame[1] << 8);
+    long pos = 0;
+    int i;
+    
+    for (i = 0; i < 4; i++)
+    {
+        pos += ((long)frame[i] << 8*i );
+    }
     setPitchControlFlag(1);
     setPitchSetpoint(pos);
     return 1;
@@ -161,11 +176,13 @@ unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsign
 
 unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     long pos = 0;
+    // unsigned short offs = frame[4] + (frame[5] << 8);
     int relative_flag = frame[4] + (frame[5] << 8);
     int i;
+    // setMotZero(offs);
     for (i = 0; i < 4; i++)
     {
-        pos += (frame[i] << 8*i );
+        pos += ((long)frame[i] << 8*i );
     }
     if (relative_flag){
         pidObjs[1].p_input += pos;
@@ -364,7 +381,7 @@ unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned cha
     int i;
     for (i = 0; i < 4; i++)
     {
-        offset += (frame[i] << 8*i );
+        offset += ((long)frame[i] << 8*i );
     }
     error = offset - ((pidObjs[0].p_state & 0x0000FFFF) - (pidObjs[1].p_state & 0x0000FFFF)); 
     

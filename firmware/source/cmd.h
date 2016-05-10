@@ -25,7 +25,8 @@
 #define CMD_SET_PITCH_SET           0x96
 #define CMD_RESET_BODY_ANG          0x97
 #define CMD_SET_CURRENT_LIMITS      0x98
-#define CMD_SET_MOTOR_POS     	    0x99
+#define CMD_SET_MOTOR_POS           0x99
+#define CMD_START_EXP    	        0x9A
 // Redefine
 
 void cmdSetup(void);

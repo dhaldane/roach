@@ -5,13 +5,14 @@
 // Data structure type
 
 typedef struct {
-    int32_t posMotor; // Hall angle position
-    int32_t posKnee;
     int32_t posTail;
-    int32_t composTail; // Commanded Hall angle position
+    int32_t posFemur;
+    int32_t posMotor; // Hall angle position
+    int32_t bodyAngle;
+    int32_t composBody; // Commanded Hall angle position
     int32_t composMotor;
-    int16_t dcL; // PWM duty cycle
-    int16_t dcR;
+    int16_t dcTail; // PWM duty cycle
+    int16_t dcBLDC;
     int16_t gyroX;
     int16_t gyroY;
     int16_t gyroZ;

@@ -10,6 +10,8 @@
 #include "timer.h"
 #include "ports.h"
 #include "pid-ip2.5.h"
+#include "experiment.h"
+#define ABS(my_val) ((my_val) < 0) ? -(my_val) : (my_val)
 
 
 #define GYRO_LSB2_DEG (0.061035156) // +-2000 deg/s in 16 bits
@@ -23,7 +25,7 @@ long body_angle;
 extern pidPos pidObjs[NUM_PIDS];
 
 char pitchControlFlag;
-float pitchSetpoint;
+long pitchSetpoint;
 
 
 void tailCtrlSetup(){
@@ -32,7 +34,7 @@ void tailCtrlSetup(){
         interval[i] = 2; //2 ms duration for in
     }
     body_angle = 0;
-    initPIDObjPos( &(pidObjs[0]), 1800,0,0,0,0);
+    initPIDObjPos( &(pidObjs[0]), 500,0,0,0,0);
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
@@ -50,11 +52,12 @@ void setPitchControlFlag(char state){
 }
 
 
-void setPitchSetpoint(int setpoint){
+void setPitchSetpoint(long setpoint){
     pitchSetpoint = setpoint;
 }
 
 void resetBodyAngle(){
+    // mpuRunCalib(0,100); //re-offset gyro, assumes stationary
     body_angle = 0;
 }
 
@@ -63,27 +66,29 @@ void resetBodyAngle(){
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
     interrupt_count++;
     
-
+    expFlow();
+    
     if(interrupt_count <= 5) {
         // Do signal processing on gyro
-        int gdata[3];   
+        int gdata[3];
         mpuGetGyro(gdata);
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        body_angle += gdata[2]*0.001;
+        if(ABS(gdata[2])>80){body_angle += gdata[2]-33;}
 
     }
     if(interrupt_count == 5) 
     {
+        char cont;
+        cont = footContact();
         interrupt_count = 0;
 
         if(pitchControlFlag == 0){
-            LED_1 = 0;
+            LED_2 = 0;
             // Control/motor off
             pidObjs[0].onoff = 0;
         } else {
-            LED_1 = 1;
+            LED_2 = 1;
             // Control pitch
-            pidObjs[0].onoff = 1;
             pidObjs[0].p_input = pitchSetpoint;
         }
     }

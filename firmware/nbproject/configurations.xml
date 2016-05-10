@@ -39,6 +39,7 @@
         <itemPath>../lib/vr_telem.h</itemPath>
         <itemPath>../lib/tail_ctrl.h</itemPath>
         <itemPath>../lib/as5047.h</itemPath>
+        <itemPath>../lib/experiment.h</itemPath>
       </logicalFolder>
       <logicalFolder name="f1" displayName="settings" projectFiles="true">
         <itemPath>../../imageproc-settings/settings.h</itemPath>
@@ -84,6 +85,7 @@
         <itemPath>../lib/vr_telem.c</itemPath>
         <itemPath>../lib/tail_ctrl.c</itemPath>
         <itemPath>../lib/as5047.c</itemPath>
+        <itemPath>../lib/experiment.c</itemPath>
       </logicalFolder>
       <itemPath>source/cmd.c</itemPath>
       <itemPath>source/main.c</itemPath>
@@ -302,7 +304,7 @@
         <property key="memories.programmemory" value="true"/>
         <property key="memories.programmemory.end" value="0x157ff"/>
         <property key="memories.programmemory.start" value="0x0"/>
-        <property key="poweroptions.powerenable" value="false"/>
+        <property key="poweroptions.powerenable" value="true"/>
         <property key="programmertogo.imagename" value=""/>
         <property key="programoptions.donoteraseauxmem" value="false"/>
         <property key="programoptions.eraseb4program" value="true"/>

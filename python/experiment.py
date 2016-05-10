@@ -22,7 +22,7 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
+    motorgains = [500,0,0,0,0, 100,0,0,0,0]
     duration = 500
     rightFreq = 0
     leftFreq = 0
@@ -58,26 +58,22 @@ def main():
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
             print os.curdir
-            if manParams.useFlag == True:
-                duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
-                numSamples = int(ceil(1000 * duration))
-            else:
-                numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
-            eraseFlashMem(numSamples)
 
-        # Trigger telemetry save, which starts as soon as it is received
-        if params.telemetry:
-        # Pause and wait to start run, including leadin time
+            numSamples = int(ceil(850 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
+            eraseFlashMem(numSamples)
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
+
         #Start robot
-        if manParams.useFlag == True:
-            runManeuver(params, manParams)
-        else:
-            xb_send(0, command.SET_PHASE, pack('l', params.phase))
-            time.sleep(0.01)
-            xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
-            time.sleep(params.duration / 1000.0)
+        pos = []
+        pos.append(17 * 65536)
+        pos.append(1)
+        # xb_send(0, command.PID_START_MOTORS, "0")
+        xb_send(0, command.START_EXPERIMENT, "0")
+        # xb_send(0, command.RESET_BODY_ANG, "0")
+        # xb_send(0, command.SET_PITCH_SET, pack('h', 0))
+        time.sleep(params.duration / 1000.0)
+        # xb_send(0, command.PID_STOP_MOTORS, "0")
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

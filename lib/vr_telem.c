@@ -37,13 +37,14 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     mpuGetXl(xldata);
 
     //Motion control
-    ptr->posTail = pidObjs[0].p_state;
-    ptr->posKnee = (long)(encPos[1].pos << 2)+ (encPos[1].oticks << 16);
-    ptr->posMotor = (motPos.oticks << 16) + (long)(motPos.pos << 2);
-    ptr->composTail = pidObjs[0].p_input + pidObjs[0].interpolate;
+    ptr->posTail = (long)(encPos[0].pos << 2)+ (encPos[0].oticks << 16);
+    ptr->posFemur = (long)(encPos[1].pos << 2)+ (encPos[1].oticks << 16);
+    ptr->posMotor = -(motPos.oticks << 16) - (long)(motPos.pos << 2);
+    ptr->bodyAngle = pidObjs[0].p_state;
+    ptr->composBody = pidObjs[0].p_input + pidObjs[0].interpolate;
     ptr->composMotor = pidObjs[1].p_input + pidObjs[1].interpolate;
-    ptr->dcL = pidObjs[0].output; // left
-    ptr->dcR = pidObjs[1].output; // right
+    ptr->dcTail = pidObjs[0].output; // left
+    ptr->dcBLDC = pidObjs[1].output; // right
 
     //gyro and XL
     ptr->gyroX = gdata[0];
