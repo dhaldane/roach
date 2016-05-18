@@ -4,7 +4,8 @@
 #include "ams-enc.h"
 #include "tail_ctrl.h"
 #include "led.h"
-#include "math.h"
+// #include "math.h"
+#include "lut.h"
 
 
 #define ABS(my_val) ((my_val) < 0) ? -(my_val) : (my_val)
@@ -33,7 +34,7 @@ extern long body_angle;
 void expFlow() {
     switch(exp_state) {
         case EXP_STOP:
-            if((t1_ticks-t_start) > 500){
+            if((t1_ticks-t_start) > 600){
                 pidObjs[0].onoff = 0;
                 pidObjs[1].onoff = 0;
                 exp_state = EXP_IDLE;
@@ -43,26 +44,36 @@ void expFlow() {
             break;
         case EXP_READY_LEG:
             // exp_state = EXP_READY_LEG;
-            pidObjs[1].p_input = ((long)5 << 16); // Move to 10 revs forward
-            setPitchSetpoint(5000000); //Full reverse!
-            exp_state = EXP_STOP;
-            // if(footContact() == 1){exp_state = EXP_JUMP;}
+            exp_state = EXP_READY_LEG;
+            if(footContact() == 1){
+                pidObjs[1].p_input = ((long)12 << 16); 
+                setPitchSetpoint(1000000);
+                exp_state = EXP_STOP;
+            }
             break;
         case EXP_JUMP:
-            pidObjs[1].p_input = ((long)10 << 16); // Move to 10 revs forward
-            t_start = t1_ticks;
-            exp_state = EXP_READY_LEG;
+            pidObjs[1].p_input = ((long)12 << 16); // Move to 10 revs forward
+            exp_state = EXP_JUMP;
+            if((t1_ticks-t_start) > 100){
+                setPitchSetpoint(1100000);
+                pidObjs[1].p_input = ((long)1 << 16);
+            }
+            // if((t1_ticks-t_start) > 200){exp_state = EXP_READY_LEG;}
+            if((t1_ticks-t_start) > 220){exp_state = EXP_READY_LEG;}
             break;          
         case EXP_JUMP_TRIG:
             exp_state = EXP_JUMP_TRIG;
-            if(body_angle < -160000 ){exp_state = EXP_JUMP;}
+            if(body_angle < -170000 ){
+                exp_state = EXP_JUMP; 
+                t_start = t1_ticks;
+            }
             break;
         case EXP_START:
             pidObjs[0].timeFlag = 0;
             pidObjs[1].timeFlag = 0;
             resetBodyAngle();
             setPitchControlFlag(1);
-            setPitchSetpoint(-160384); //10 degrees forward
+            setPitchSetpoint(-551287); //25 degrees forward
             pidSetInput(0, 0);
             pidOn(0);
             pidSetInput(1, 0);
@@ -83,11 +94,11 @@ void expStart() {
 
 
 char footContact(void) {
-    int eps = 50;
-    long mot, femur;
-    mot = calibPos(0)/25;
+    int eps = 3000;
+    unsigned int mot, femur;
+    mot = (unsigned int)(calibPos(0)*motPos_to_femur_crank_units);
     femur = crankFromFemur();
-    if ((mot - femur) > eps)
+    if ( mot+800>femur && (mot+800 - femur) > eps)
     {
         LED_1 = 1;
         return 1;
@@ -111,7 +122,7 @@ long calibPos(char idx){
     }
     else if (idx == 2)
     {
-    temp = (long)((encPos[1].pos-encPos[1].offset) << 2);       // pos 14 bits 0x0 -> 0x3fff
+    temp = (long)((encPos[1].pos) << 2)- (long)(encPos[1].offset << 2);       // pos 14 bits 0x0 -> 0x3fff
     return temp + (encPos[1].oticks << 16);
     }
     else{
@@ -119,9 +130,17 @@ long calibPos(char idx){
     }
 }
 
-long crankFromFemur(void) { // TODO: Avoid float conversion
-    float femur, crank;
-    femur = calibPos(2) * LSB2ENCRAD;
-    crank = 2.003*powf(femur,5.0) - 7.434*powf(femur,4.0) + 9.429*powf(femur,3.0) - 2.691*powf(femur,2.0) + 0.3893*femur - 0.001175;
-    return (long) (crank * ENCRAD2LSB);
+// long crankFromFemur(void) { // TODO: Avoid float conversion
+//     float femur, crank;
+//     femur = calibPos(2) * LSB2ENCRAD;
+//     crank = 2.003*powf(femur,5.0) - 7.434*powf(femur,4.0) + 9.429*powf(femur,3.0) - 2.691*powf(femur,2.0) + 0.3893*femur - 0.001175;
+//     return (long) (crank * ENCRAD2LSB);
+// }
+
+unsigned int crankFromFemur(void) { 
+    unsigned int femur;
+    femur = calibPos(2) / 64;
+    if(femur>255){femur=255;}
+    if(femur<0){femur=0;} 
+    return crank_femur_256lut[femur];
 }

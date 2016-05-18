@@ -85,7 +85,7 @@ void asSetup(void) {
   // Write zero position
   setMotZero(1503);
   // setMotZero(2383); ???? This was determined value. Check on this
-  motMin = -1000;
+  motMin = -4000;
   motMax = 4000;
   tiHChangeMode(1, TIH_MODE_BRAKE);
   motPos.offset = 4613;

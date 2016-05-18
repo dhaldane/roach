@@ -86,6 +86,7 @@
         <itemPath>../lib/tail_ctrl.c</itemPath>
         <itemPath>../lib/as5047.c</itemPath>
         <itemPath>../lib/experiment.c</itemPath>
+        <itemPath>../lib/lut.h</itemPath>
       </logicalFolder>
       <itemPath>source/cmd.c</itemPath>
       <itemPath>source/main.c</itemPath>
