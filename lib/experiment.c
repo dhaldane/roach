@@ -4,6 +4,7 @@
 #include "ams-enc.h"
 #include "tail_ctrl.h"
 #include "led.h"
+#include "mpu6000.h"
 // #include "math.h"
 #include "lut.h"
 
@@ -32,6 +33,8 @@ extern long body_angle;
 
 
 void expFlow() {
+    int gdata[3];
+    mpuGetGyro(gdata);
     switch(exp_state) {
         case EXP_STOP:
             if((t1_ticks-t_start) > 600){
@@ -45,9 +48,9 @@ void expFlow() {
         case EXP_READY_LEG:
             // exp_state = EXP_READY_LEG;
             exp_state = EXP_READY_LEG;
-            if(footContact() == 1){
+            if(footContact() == 1 || gdata[2] < -6000){
                 pidObjs[1].p_input = ((long)12 << 16); 
-                setPitchSetpoint(1000000);
+                setPitchSetpoint(900000);
                 exp_state = EXP_STOP;
             }
             break;
@@ -55,15 +58,15 @@ void expFlow() {
             pidObjs[1].p_input = ((long)12 << 16); // Move to 10 revs forward
             exp_state = EXP_JUMP;
             if((t1_ticks-t_start) > 100){
-                setPitchSetpoint(1100000);
+                setPitchSetpoint(1000000);
                 pidObjs[1].p_input = ((long)1 << 16);
             }
             // if((t1_ticks-t_start) > 200){exp_state = EXP_READY_LEG;}
-            if((t1_ticks-t_start) > 220){exp_state = EXP_READY_LEG;}
+            if((t1_ticks-t_start) > 280){exp_state = EXP_READY_LEG;}
             break;          
         case EXP_JUMP_TRIG:
             exp_state = EXP_JUMP_TRIG;
-            if(body_angle < -170000 ){
+            if(body_angle < -175000 ){
                 exp_state = EXP_JUMP; 
                 t_start = t1_ticks;
             }

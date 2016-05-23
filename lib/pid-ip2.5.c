@@ -431,7 +431,7 @@ void pidGetState()
     pidObjs[0].p_state = body_angle;
     pidObjs[1].p_state = -p_state;
 
-    velocity = pidObjs[1].p_state - oldpos[i];  // Encoder ticks per ms
+    velocity = (pidObjs[1].p_state - oldpos[1]) / 64;  // Encoder ticks per ms
     if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
     if(velocity < -0x7fff) velocity = -0x7fff;	
     pidObjs[1].v_state = (int) velocity;

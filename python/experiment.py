@@ -22,7 +22,7 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [20,0,15,0,0, 100,0,0,0,0]
+    motorgains = [25,0,15,0,0, 100,0,0,0,0]
     duration = 2000
     rightFreq = 0
     leftFreq = 0
