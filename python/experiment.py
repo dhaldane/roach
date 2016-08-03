@@ -65,8 +65,18 @@ def main():
             startTelemetrySave(numSamples)
 
         #Start robot
-        xb_send(0, command.START_EXPERIMENT, "0")
-        time.sleep(params.duration / 1000.0)
+        # xb_send(0, command.START_EXPERIMENT, "0")
+        # time.sleep(params.duration / 1000.0)
+
+        # Just jump
+        pos = []
+        pos.append(13 * 65536)
+        pos.append(1)
+        xb_send(0, command.PID_START_MOTORS, "0")
+        xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
+        print pos
+        time.sleep(params.duration/1000.0)
+        xb_send(0, command.PID_STOP_MOTORS, "0")
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

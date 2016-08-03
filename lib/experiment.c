@@ -55,7 +55,7 @@ void expFlow() {
             }
             break;
         case EXP_JUMP:
-            pidObjs[1].p_input = ((long)12 << 16); // Move to 10 revs forward
+            pidObjs[1].p_input = ((long)12 << 16); // Move to 12 revs forward
             exp_state = EXP_JUMP;
             if((t1_ticks-t_start) > 100){
                 setPitchSetpoint(1000000);
