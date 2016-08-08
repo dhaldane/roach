@@ -4,4 +4,4 @@ void tailCtrlSetup();
 void resetBodyAngle();
 void setPitchSetpoint(long setpoint);
 
-extern long body_angle;
+extern long body_angle[3];

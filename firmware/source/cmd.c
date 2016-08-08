@@ -245,25 +245,31 @@ unsigned char cmdFlashReadback(unsigned char type, unsigned char status, unsigne
 // =============================================================================================================
 
 unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
-    int thrust1 = frame[0] + (frame[1] << 8);
-    int thrust2 = frame[2] + (frame[3] << 8);
-    unsigned int run_time_ms = frame[4] + (frame[5] << 8);
+    // int thrust1 = frame[0] + (frame[1] << 8);
+    // int thrust2 = frame[2] + (frame[3] << 8);
+    // unsigned int run_time_ms = frame[4] + (frame[5] << 8);
 
-    DisableIntT1;   // since PID interrupt overwrites PWM values
 
-    tiHSetDC(1, thrust1);
-    tiHSetDC(2, thrust2);
-    LED_3 = 1;
-    delay_ms(run_time_ms);
-    tiHSetDC(1,0);
-    tiHSetDC(2,0);
 
-    EnableIntT1;
+    // DisableIntT1;   // since PID interrupt overwrites PWM values
+
+    // tiHSetDC(1, thrust1);
+    // tiHSetDC(2, thrust2);
+    // LED_3 = 1;
+    // delay_ms(run_time_ms);
+    // tiHSetDC(1,0);
+    // tiHSetDC(2,0);
+
+    // EnableIntT1;
+    /// HIGHJACKING FUNCTION 8/3/2016 FOR PROP GAINS
+    int Kp = frame[0] + (frame[1] << 8);
+    int Kd = frame[2] + (frame[3] << 8);
+    pidSetGains(3,Kp,0,Kd,0,0);
+    LED_1=~LED_1;
     return 1;
  } 
 
  unsigned char cmdSetMotorMode(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
-
 
     int thrust1 = frame[0] + (frame[1] << 8);
     int thrust2 = frame[2] + (frame[3] << 8);
@@ -272,11 +278,10 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     pidObjs[1].pwmDes = thrust2;
 
     pidObjs[0].mode = 1;
-
     return 1;
  }
 
- unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
+unsigned char cmdSetPIDGains(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
     int Kp, Ki, Kd, Kaw, ff;
     int idx = 0;
 
@@ -347,20 +352,23 @@ unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigne
 }
 
 unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
-    pidObjs[0].timeFlag = 0;
-    pidObjs[1].timeFlag = 0;
-    pidSetInput(0, 0);
-    pidObjs[0].p_input = pidObjs[0].p_state;
-    pidOn(0);
-    pidSetInput(1, 0);
-    pidObjs[1].p_input = pidObjs[1].p_state;
-    pidOn(1);
+    
+    int i;
+    for(i=0;i<NUM_PIDS;i++){  
+    pidObjs[i].timeFlag = 0;
+    pidSetInput(i, 0);
+    pidObjs[i].p_input = pidObjs[i].p_state;
+    pidOn(i);
+    }
+
     return 1;
 }
 
 unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
-    pidObjs[0].onoff = 0;
-    pidObjs[1].onoff = 0;
+    int i;
+    for(i=0;i<NUM_PIDS;i++){  
+        pidObjs[i].onoff = 0;
+    }
     return 1;
 }
 
