@@ -29,7 +29,7 @@ extern EncObj motPos;
 extern EncObj encPos[NUM_ENC];
 extern pidPos pidObjs[NUM_PIDS];
 extern unsigned long t1_ticks;
-extern long body_angle;
+extern long body_angle[3];
 
 
 void expFlow() {
@@ -66,7 +66,7 @@ void expFlow() {
             break;          
         case EXP_JUMP_TRIG:
             exp_state = EXP_JUMP_TRIG;
-            if(body_angle < -175000 ){
+            if(body_angle[2] < -175000 ){
                 exp_state = EXP_JUMP; 
                 t_start = t1_ticks;
             }

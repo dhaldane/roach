@@ -20,7 +20,7 @@ static volatile unsigned char interrupt_count = 0;
 static int interval[NUM_VELS];
 long set_pt = 0;
 
-long body_angle;
+long body_angle[3];
 
 extern pidPos pidObjs[NUM_PIDS];
 
@@ -33,8 +33,12 @@ void tailCtrlSetup(){
     for(i=0; i<NUM_VELS; i++){
         interval[i] = 2; //2 ms duration for in
     }
-    body_angle = 0;
+    body_angle[0]=0;
+    body_angle[1]=0;
+    body_angle[2]=0;
     initPIDObjPos( &(pidObjs[0]), 500,0,0,0,0);
+    initPIDObjPos( &(pidObjs[2]), -500,0,-500,0,0);
+    initPIDObjPos( &(pidObjs[3]), 500,0,500,0,0);
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
@@ -58,7 +62,9 @@ void setPitchSetpoint(long setpoint){
 
 void resetBodyAngle(){
     // mpuRunCalib(0,100); //re-offset gyro, assumes stationary
-    body_angle = 0;
+    body_angle[0] = 0;
+    body_angle[1] = 0;
+    body_angle[2] = 0;
 }
 
 ///////        Tail control ISR          ////////
@@ -73,13 +79,13 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         int gdata[3];
         mpuGetGyro(gdata);
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        if(ABS(gdata[2])>80){body_angle += gdata[2]+25;}
+        if(ABS(gdata[0])>80){body_angle[0] += gdata[0]- 11;}
+        if(ABS(gdata[1])>80){body_angle[1] += gdata[1]- 19;}
+        if(ABS(gdata[2])>80){body_angle[2] += gdata[2]+ 25;}
 
     }
     if(interrupt_count == 5) 
     {
-        char cont;
-        cont = footContact();
         interrupt_count = 0;
 
         if(pitchControlFlag == 0){
@@ -90,6 +96,8 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
             LED_2 = 1;
             // Control pitch
             pidObjs[0].p_input = pitchSetpoint;
+            pidObjs[2].p_input = 0;
+            pidObjs[3].p_input = 0;
         }
     }
 

@@ -124,12 +124,12 @@ def settingsMenu(params, manParams):
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
         elif keypress == 'o':
-            print 'Enter Duty Cycle (Left,Right, Duration (ms)) : ',
+            print 'Enter Gains (P,D) : ',
             x = raw_input()
             if len(x):
                 pwmDes = map(int,x.split(','))
-                xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('3h', *pwmDes))
-                print 'Set Duty cycle: ', pwmDes
+                xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+                print 'Gains: ', pwmDes
             else:
                 print 'narp'
         elif keypress == 'e':

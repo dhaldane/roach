@@ -72,6 +72,8 @@ def main():
         pos = []
         pos.append(13 * 65536)
         pos.append(1)
+        pwmDes = [0,0]
+        xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
         xb_send(0, command.PID_START_MOTORS, "0")
         xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
         print pos

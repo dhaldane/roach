@@ -204,12 +204,12 @@ unsigned long temp;
 
 void pidStartTimedTrial(unsigned int run_time){
     unsigned long temp;
-
+    int i;
     temp = t1_ticks;  // need atomic read due to interrupt  
-    pidObjs[0].run_time = run_time;
-    pidObjs[1].run_time = run_time;
-    pidObjs[0].start_time = temp;
-    pidObjs[1].start_time = temp;
+    for(i=0;i<NUM_PIDS;i++){
+        pidObjs[i].run_time = run_time;
+        pidObjs[i].start_time = temp;       
+    }
     if ((temp + (unsigned long) run_time) > lastMoveTime)
     { lastMoveTime = temp + (unsigned long) run_time; }  // set run time to max requested time
 }
@@ -316,7 +316,7 @@ extern volatile MacPacket uart_tx_packet;
 extern volatile unsigned char uart_tx_flag;
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
-    int j;
+    int j,i;
     LED_3 = 1;
     interrupt_count++;
 
@@ -330,7 +330,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     if(interrupt_count == 4) {
         mpuBeginUpdate();
         amsEncoderStartAsyncRead();
-        as5047EncoderUpdatePos();
+        // as5047EncoderUpdatePos();
     }
     //PID controller update
     else if(interrupt_count == 5)
@@ -348,8 +348,9 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                         pidGetSetpoint(j);
                     }
                     if(t1_ticks > lastMoveTime){ // turn off if done running all legs
-                        pidObjs[0].onoff = 0;
-                        pidObjs[1].onoff = 0;
+                        for(i=0;i<NUM_PIDS;i++){
+                        pidObjs[i].onoff = 0;
+                    }
                     } 
                 } 
                 else {                 
@@ -415,7 +416,7 @@ void checkSwapBuff(int j){
 #define VEL_BEMF 0
 
 /* update state variables including motor position and velocity */
-extern long body_angle;
+extern long body_angle[3];
 extern EncObj motPos;
 void pidGetState()
 {   int i;
@@ -428,7 +429,9 @@ void pidGetState()
     p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
     p_state = p_state + (motPos.oticks << 16);
     p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
-    pidObjs[0].p_state = body_angle;
+    pidObjs[0].p_state = body_angle[2];
+    pidObjs[2].p_state = body_angle[1];
+    pidObjs[3].p_state = body_angle[0];
     pidObjs[1].p_state = -p_state;
 
     velocity = (pidObjs[1].p_state - oldpos[1]) / 64;  // Encoder ticks per ms
@@ -439,6 +442,8 @@ void pidGetState()
     int gdata[3];   
     mpuGetGyro(gdata);
     pidObjs[0].v_state = gdata[2];
+    pidObjs[2].v_state = gdata[1];
+    pidObjs[3].v_state = gdata[0];
 }
 
 
@@ -446,7 +451,7 @@ long min_pos = -3000;
 long max_pos = 1114112;
 
 void pidSetControl()
-{ int j;
+{ int i,j;
 // 0 = right side
     for(j=0; j < NUM_PIDS; j++)
    {  //pidobjs[0] : right side
@@ -457,12 +462,10 @@ void pidSetControl()
             //Update values
             UpdatePID(&(pidObjs[j]),j);
        } // end of for(j)
-
-        if(pidObjs[0].onoff) {tiHSetDC(1, pidObjs[0].output); } 
-        else {tiHSetDC(1,0);} // turn off motor if PID loop is off
-
-        if(pidObjs[1].onoff) {tiHSetDC(2, pidObjs[1].output); } 
-		else {tiHSetDC(2,0);} // turn off motor if PID loop is off		
+   for(i=0;i<NUM_PIDS;i++){
+        if(pidObjs[i].onoff) {tiHSetDC(i+1, pidObjs[i].output); }
+        else {tiHSetDC(i+1,0);} // turn off motor if PID loop is off
+    }
 }
 
 extern EncObj motPos;
@@ -485,7 +488,7 @@ void UpdatePID(pidPos *pid, int num)
 
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
-    if(num==0){
+    if(num==0 || num == 2 || num==3){
     	if (pid->preSat > MAXTHROT) 
     	{ 	      pid->output = MAXTHROT; 
     			pid->i_error = (long) pid->i_error + 
