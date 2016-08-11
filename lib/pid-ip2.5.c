@@ -472,23 +472,45 @@ extern EncObj motPos;
 
 void UpdatePID(pidPos *pid, int num)
 {
-    pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
-    pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
-    pid->d=  (long)pid->Kd *  (long) pid->v_error;
-    // better check scale factors
+    if(num > 3){
+        pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
+        pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
+        pid->d=  (long)pid->Kd *  (long) pid->v_error;
+        // better check scale factors
 
-    pid->preSat = pid->feedforward + pid->p +
-		 ((pid->i ) >> 4) +  // divide by 16
-		  (pid->d >> 4); // divide by 16
-	pid->output = pid->preSat;
+        pid->preSat = pid->feedforward + pid->p +
+    		 ((pid->i ) >> 4) +  // divide by 16
+    		  (pid->d >> 4); // divide by 16
+    	pid->output = pid->preSat;
  
-/* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
-    scale p_error by 16, so get 12 bit angle value*/
-	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+    /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
+        scale p_error by 16, so get 12 bit angle value*/
+    	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+    // Mixing for Thruster control
+    if (num == 2)
+    {
+        pidPos yaw = &(pidObjs[3]);
+        yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
+        yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
+        yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
+        // better check scale factors
 
+        yaw->preSat = yaw->feedforward + yaw->p +
+             ((yaw->i ) >> 4) +  // divide by 16
+              (yaw->d >> 4); // divide by 16
+        yaw->output = yaw->preSat;
+
+        pid->output = (2*pid->output + yaw->output)/2;
+        yaw->output = (2*pid->output - yaw->output)/2;
+        if (yaw->preSat < -MAXTHROT){yaw->output = -MAXTHROT;} 
+        if (pid->preSat < -MAXTHROT){pid->output = -MAXTHROT;} 
+        if (yaw->preSat > MAXTHROT){yaw->output = MAXTHROT;} 
+        if (pid->preSat > MAXTHROT){pid->output = MAXTHROT;} 
+
+    }
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
-    if(num==0 || num == 2 || num==3){
+    if(num==0){
     	if (pid->preSat > MAXTHROT) 
     	{ 	      pid->output = MAXTHROT; 
     			pid->i_error = (long) pid->i_error + 
@@ -527,6 +549,7 @@ void UpdatePID(pidPos *pid, int num)
                     (long)(pid->Kaw) * ((long)(min) - (long)(pid->preSat)) 
                     / ((long)GAIN_SCALER);      
         }
+    }
     }   
 }
 
