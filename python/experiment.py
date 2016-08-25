@@ -22,7 +22,8 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [25,0,15,0,0, 100,0,0,0,0]
+    motorgains = [300,0,25,0,0, 100,0,0,0,0]
+    # motorgains = [0,0,0,0,0, 100,0,0,0,0]
     duration = 2000
     rightFreq = 0
     leftFreq = 0
@@ -73,9 +74,9 @@ def main():
         pos.append(13 * 65536)
         pos.append(1)
         pwmDes = [0,0]
-        xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+        # xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
         xb_send(0, command.PID_START_MOTORS, "0")
-        xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
+        # xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
         print pos
         time.sleep(params.duration/1000.0)
         xb_send(0, command.PID_STOP_MOTORS, "0")

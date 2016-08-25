@@ -124,7 +124,7 @@ def settingsMenu(params, manParams):
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
         elif keypress == 'o':
-            print 'Enter Gains (P,D) : ',
+            print 'Enter Gains (Roll P, Yaw P) : ',
             x = raw_input()
             if len(x):
                 pwmDes = map(int,x.split(','))
@@ -182,12 +182,12 @@ def settingsMenu(params, manParams):
             x = raw_input()
             if len(x):
                 temp = map(int,x.split(','))
-            temp[0] = temp[0]*16384
-            xb_send(0, command.RESET_BODY_ANG, "0")
-            xb_send(0, command.PID_START_MOTORS, "0")
-            xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
-            time.sleep(params.duration/1000.0)
-            xb_send(0, command.PID_STOP_MOTORS, "0")
+                temp[0] = temp[0]*16384
+                xb_send(0, command.RESET_BODY_ANG, "0")
+                xb_send(0, command.PID_START_MOTORS, "0")
+                xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
+                time.sleep(params.duration/1000.0)
+                xb_send(0, command.PID_STOP_MOTORS, "0")
 
         elif keypress == 'q': 
             print "Exit."

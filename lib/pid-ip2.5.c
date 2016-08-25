@@ -472,7 +472,7 @@ extern EncObj motPos;
 
 void UpdatePID(pidPos *pid, int num)
 {
-    if(num > 3){
+    if(num < 3){
         pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
         pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
         pid->d=  (long)pid->Kd *  (long) pid->v_error;
@@ -489,7 +489,7 @@ void UpdatePID(pidPos *pid, int num)
     // Mixing for Thruster control
     if (num == 2)
     {
-        pidPos yaw = &(pidObjs[3]);
+        pidPos *yaw = &(pidObjs[3]);
         yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
         yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
         yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
@@ -499,18 +499,23 @@ void UpdatePID(pidPos *pid, int num)
              ((yaw->i ) >> 4) +  // divide by 16
               (yaw->d >> 4); // divide by 16
         yaw->output = yaw->preSat;
-
-        pid->output = (2*pid->output + yaw->output)/2;
-        yaw->output = (2*pid->output - yaw->output)/2;
-        if (yaw->preSat < -MAXTHROT){yaw->output = -MAXTHROT;} 
-        if (pid->preSat < -MAXTHROT){pid->output = -MAXTHROT;} 
-        if (yaw->preSat > MAXTHROT){yaw->output = MAXTHROT;} 
-        if (pid->preSat > MAXTHROT){pid->output = MAXTHROT;} 
+        int temp_roll, temp_yaw;
+        temp_roll = -pid->output;
+        temp_yaw = yaw->output;
+        pid->output = (2*temp_roll + temp_yaw)/2;
+        yaw->output = (2*temp_roll - temp_yaw)/2;
+        // TODO: Saturate correctly for control effort in yaw/roll
+        if (yaw->output < -MAXTHROT){yaw->output = -MAXTHROT;} 
+        if (pid->output < -MAXTHROT){pid->output = -MAXTHROT;} 
+        if (yaw->output > MAXTHROT){yaw->output = MAXTHROT;} 
+        if (pid->output > MAXTHROT){pid->output = MAXTHROT;} 
 
     }
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
     if(num==0){
+        pid->preSat = -pid->preSat;
+        pid->output = -pid->output;
     	if (pid->preSat > MAXTHROT) 
     	{ 	      pid->output = MAXTHROT; 
     			pid->i_error = (long) pid->i_error + 
