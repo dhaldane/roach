@@ -49,7 +49,7 @@ typedef struct
  	char timeFlag;
 	unsigned long run_time;
 	unsigned long start_time;
-	int inputOffset;  // BEMF setpoint offset
+	int extraVel; // Hijack this for tail velocity storage. Old line: int inputOffset;  // BEMF setpoint offset
 	int feedforward;
     int Kp, Ki, Kd;
 	int Kaw;  // anti-windup gain

@@ -38,8 +38,8 @@ void tailCtrlSetup(){
     body_angle[2]=0;
     initPIDObjPos( &(pidObjs[0]), 500,0,0,0,0);
     // initPIDObjPos( &(pidObjs[2]), -500,0,-500,0,0);
-    initPIDObjPos( &(pidObjs[2]), 100,0,0,0,0);
-    initPIDObjPos( &(pidObjs[3]), 80,0,0,0,0);
+    initPIDObjPos( &(pidObjs[2]), 100,0,100,0,0);
+    initPIDObjPos( &(pidObjs[3]), 80,0,80,0,0);
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;

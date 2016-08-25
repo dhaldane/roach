@@ -271,12 +271,12 @@ void calibBatteryOffset(int spindown_ms){
 	//Left
 	temp = offsetAccumulatorL;
 	temp = temp/(long)offsetAccumulatorCounter;
-	pidObjs[0].inputOffset = (int) temp;
+	// pidObjs[0].inputOffset = (int) temp;
 
 	//Right
 	temp = offsetAccumulatorR;
 	temp = temp/(long)offsetAccumulatorCounter;
-	pidObjs[1].inputOffset = (int) temp;
+	// pidObjs[1].inputOffset = (int) temp;
 
 	LED_RED = 0;
 // restore PID values
@@ -418,14 +418,17 @@ void checkSwapBuff(int j){
 /* update state variables including motor position and velocity */
 extern long body_angle[3];
 extern EncObj motPos;
+extern EncObj encPos;
+long oldTailPos;
+
 void pidGetState()
 {   int i;
-    long p_state;
+    long p_state, tail_pos;
     long oldpos[NUM_PIDS], velocity;
     
     for(i=0; i<NUM_PIDS; i++)
     { oldpos[i] = pidObjs[i].p_state; }
-
+    
     p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
     p_state = p_state + (motPos.oticks << 16);
     p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
@@ -439,6 +442,14 @@ void pidGetState()
     if(velocity < -0x7fff) velocity = -0x7fff;	
     pidObjs[1].v_state = (int) velocity;
 
+    tail_pos = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
+
+    velocity = (tail_pos - oldTailPos) / 64;  // Encoder ticks per ms
+    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
+    if(velocity < -0x7fff) velocity = -0x7fff;  
+    pidObjs[0].extraVel = (int) velocity;
+    oldTailPos = tail_pos;
+    
     int gdata[3];   
     mpuGetGyro(gdata);
     pidObjs[0].v_state = gdata[2];
@@ -467,8 +478,6 @@ void pidSetControl()
         else {tiHSetDC(i+1,0);} // turn off motor if PID loop is off
     }
 }
-
-extern EncObj motPos;
 
 void UpdatePID(pidPos *pid, int num)
 {

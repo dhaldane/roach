@@ -37,7 +37,7 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     mpuGetXl(xldata);
 
     //Motion control
-    ptr->posTail = (long)(encPos[0].pos << 2)+ (encPos[0].oticks << 16);
+    ptr->posTail = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
     ptr->posFemur = (long)((encPos[1].pos-encPos[1].offset) << 2)+ (encPos[1].oticks << 16);
     ptr->posMotor = -(motPos.oticks << 16) - (long)(motPos.pos << 2);
     ptr->bodyAngle = pidObjs[0].p_state;
