@@ -22,9 +22,11 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [300,0,25,0,0, 100,0,0,0,0]
+    motorgains = [600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    duration = 2000
+    thrustGains = [200,80]
+    xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
+    duration = 5000
     rightFreq = 0
     leftFreq = 0
     phase = 0

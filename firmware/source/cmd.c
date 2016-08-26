@@ -264,8 +264,8 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     /// HIGHJACKING FUNCTION 8/3/2016 FOR PROP GAINS
     int Kpr = frame[0] + (frame[1] << 8);
     int Kpy = frame[2] + (frame[3] << 8);
-    pidSetGains(2,Kpr,0,Kpr,0,0);
-    pidSetGains(3,Kpy,0,Kpy,0,0);
+    pidSetGains(2,Kpr,0,Kpr/2,0,0);
+    pidSetGains(3,Kpy,0,Kpy/2,0,0);
     return 1;
  } 
 

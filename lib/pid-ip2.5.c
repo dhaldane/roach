@@ -418,7 +418,6 @@ void checkSwapBuff(int j){
 /* update state variables including motor position and velocity */
 extern long body_angle[3];
 extern EncObj motPos;
-extern EncObj encPos;
 long oldTailPos;
 
 void pidGetState()
@@ -427,7 +426,7 @@ void pidGetState()
     long oldpos[NUM_PIDS], velocity;
     
     for(i=0; i<NUM_PIDS; i++)
-    { oldpos[i] = pidObjs[i].p_state; }
+    { oldpos[i] = pidObjs[i].p_state; pidObjs[i].extraVel = 0;}
     
     p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
     p_state = p_state + (motPos.oticks << 16);
@@ -449,7 +448,7 @@ void pidGetState()
     if(velocity < -0x7fff) velocity = -0x7fff;  
     pidObjs[0].extraVel = (int) velocity;
     oldTailPos = tail_pos;
-    
+
     int gdata[3];   
     mpuGetGyro(gdata);
     pidObjs[0].v_state = gdata[2];
@@ -487,7 +486,7 @@ void UpdatePID(pidPos *pid, int num)
         pid->d=  (long)pid->Kd *  (long) pid->v_error;
         // better check scale factors
 
-        pid->preSat = pid->feedforward + pid->p +
+        pid->preSat = (pid->feedforward * pid->extraVel) + pid->p +
     		 ((pid->i ) >> 4) +  // divide by 16
     		  (pid->d >> 4); // divide by 16
     	pid->output = pid->preSat;
@@ -537,7 +536,9 @@ void UpdatePID(pidPos *pid, int num)
     				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
     				/ ((long)GAIN_SCALER);		
     	}
-    } else if(num==1){ // BLDC motor
+    } else if(num==1){ 
+
+    // BLDC motor
         pid->preSat = pid->feedforward + (pid->p ) +
              ((pid->i ) >> 6) +  // divide by 64
              (pid->d >> 12); // divide by 64
