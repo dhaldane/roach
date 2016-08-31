@@ -36,10 +36,10 @@ void tailCtrlSetup(){
     body_angle[0]=0;
     body_angle[1]=0;
     body_angle[2]=0;
-    initPIDObjPos( &(pidObjs[0]), 500,0,0,0,0);
+    initPIDObjPos( &(pidObjs[0]), 0,0,0,0,0);
     // initPIDObjPos( &(pidObjs[2]), -500,0,-500,0,0);
-    initPIDObjPos( &(pidObjs[2]), 100,0,100,0,0);
-    initPIDObjPos( &(pidObjs[3]), 80,0,80,0,0);
+    initPIDObjPos( &(pidObjs[2]), 0,0,0,0,0);
+    initPIDObjPos( &(pidObjs[3]), 0,0,0,0,0); //100,100
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
@@ -49,6 +49,10 @@ void tailCtrlSetup(){
     pidObjs[0].mode = 0;
     pidSetInput(0, 0);
     pidObjs[0].p_input = pidObjs[0].p_state;
+    pidObjs[2].p_input = 0;
+    pidObjs[3].p_input = 0;
+    pidObjs[2].v_input = 0;
+    pidObjs[3].v_input = 0;
     pidOn(0);
 }
 
@@ -80,9 +84,9 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         int gdata[3];
         mpuGetGyro(gdata);
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        if(ABS(gdata[0])>80){body_angle[0] += gdata[0]- 11;}
-        if(ABS(gdata[1])>80){body_angle[1] += gdata[1]- 19;}
-        if(ABS(gdata[2])>80){body_angle[2] += gdata[2]+ 25;}
+        if(ABS(gdata[0] + 15)>80){body_angle[0] += gdata[0] + 15;}
+        if(ABS(gdata[1] - 14)>80){body_angle[1] += gdata[1] - 14;}
+        if(ABS(gdata[2] + 14)>80){body_angle[2] += gdata[2] + 14;}
 
     }
     if(interrupt_count == 5) 

@@ -451,9 +451,9 @@ void pidGetState()
 
     int gdata[3];   
     mpuGetGyro(gdata);
-    pidObjs[0].v_state = gdata[2];
-    pidObjs[2].v_state = gdata[1];
-    pidObjs[3].v_state = gdata[0];
+    pidObjs[0].v_state = gdata[2]; // Pitch angle
+    pidObjs[2].v_state = gdata[1]; // Roll angle
+    pidObjs[3].v_state = gdata[0]; // Yaw angle
 }
 
 
@@ -499,24 +499,26 @@ void UpdatePID(pidPos *pid, int num)
     {
         pidPos *yaw = &(pidObjs[3]);
         yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
-        yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
+        // yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
         yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
         // better check scale factors
 
-        yaw->preSat = yaw->feedforward + yaw->p +
-             ((yaw->i ) >> 4) +  // divide by 16
+        yaw->preSat = yaw->p +
+             // ((yaw->i ) >> 4) +  // divide by 16
               (yaw->d >> 4); // divide by 16
-        yaw->output = yaw->preSat;
-        int temp_roll, temp_yaw;
-        temp_roll = -pid->output;
-        temp_yaw = yaw->output;
-        pid->output = (2*temp_roll + temp_yaw)/2;
-        yaw->output = (2*temp_roll - temp_yaw)/2;
+
+        long temp_roll, temp_yaw;
+
+        temp_roll = (-2*pid->preSat + yaw->preSat)/2;
+        temp_yaw = (-2*pid->preSat - yaw->preSat)/2;
+
         // TODO: Saturate correctly for control effort in yaw/roll
-        if (yaw->output < -MAXTHROT){yaw->output = -MAXTHROT;} 
-        if (pid->output < -MAXTHROT){pid->output = -MAXTHROT;} 
-        if (yaw->output > MAXTHROT){yaw->output = MAXTHROT;} 
-        if (pid->output > MAXTHROT){pid->output = MAXTHROT;} 
+        if (temp_yaw < -MAXTHROT){yaw->output = -MAXTHROT;} 
+        else if (temp_yaw > MAXTHROT){yaw->output = MAXTHROT;}
+        else {yaw->output=temp_yaw;}
+        if (temp_roll < -MAXTHROT){pid->output = -MAXTHROT;} 
+        else if (temp_roll > MAXTHROT){pid->output = MAXTHROT;}
+        else {pid->output=temp_roll;}
 
     }
 // saturate output - assume only worry about >0 for now

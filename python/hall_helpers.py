@@ -411,20 +411,10 @@ def writeFileHeader(dataFileName, params, manParams):
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
 
-    if manParams.useFlag == True:
-        fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
-        fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
-        fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
-    else:    
-        fileout.write('"%  Right Stride Frequency         = ' +repr(params.rightFreq) + '"\n')
-        fileout.write('"%  Left Stride Frequency         = ' +repr(params.leftFreq) + '"\n')
-        fileout.write('"%  Phase (Fractional)         = ' +repr(params.phase) + '"\n')
-
     fileout.write('"%  Experiment.py "\n')
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')
-    # order for wiring on RF Turner
-    fileout.write('"% time | Tail Positon | Femur Position | Motor Position | Body angle | Commanded Body Angle | Commanded Motor Angle | Tail DC | BLDC DC | GyroX | GryoY | GryoZ | AX | AY | AZ "\n')
+    fileout.write('time (us), Tail Positon, Femur Position, Motor Position, Est. Pitch, Est. Roll, Est. Yaw, Commanded Pitch, Commanded Motor Angle, Tail DC, Rear Prop DC, Front Prop DC, BLDC DC, GyroX, GryoY, GryoZ, AX ,AY ,AZ\n')
     fileout.close()
 
 def eraseFlashMem(numSamples):

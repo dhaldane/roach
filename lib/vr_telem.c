@@ -40,11 +40,15 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     ptr->posTail = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
     ptr->posFemur = (long)((encPos[1].pos-encPos[1].offset) << 2)+ (encPos[1].oticks << 16);
     ptr->posMotor = -(motPos.oticks << 16) - (long)(motPos.pos << 2);
-    ptr->bodyAngle = pidObjs[0].p_state;
-    ptr->composBody = pidObjs[0].p_input + pidObjs[0].interpolate;
-    ptr->composMotor = pidObjs[1].p_input + pidObjs[1].interpolate;
+    ptr->pitch = pidObjs[0].p_state;
+    ptr->roll = pidObjs[2].p_state;
+    ptr->yaw = pidObjs[3].p_state;
+    ptr->pitchSet = pidObjs[0].p_input + pidObjs[0].interpolate;
+    ptr->motorSet = pidObjs[1].p_input + pidObjs[1].interpolate;
     ptr->dcTail = pidObjs[0].output; // left
     ptr->dcBLDC = pidObjs[1].output; // right
+    ptr->dcProp1 = pidObjs[2].output; // Rear
+    ptr->dcProp2 = pidObjs[3].output; // Fore
 
     //gyro and XL
     ptr->gyroX = gdata[0];

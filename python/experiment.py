@@ -24,7 +24,8 @@ def main():
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    thrustGains = [200,80]
+    thrustGains = [0,200]
+    thrustGains = [0,0]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
     duration = 5000
     rightFreq = 0
@@ -71,15 +72,21 @@ def main():
         # xb_send(0, command.START_EXPERIMENT, "0")
         # time.sleep(params.duration / 1000.0)
 
-        # Just jump
-        pos = []
-        pos.append(13 * 65536)
-        pos.append(1)
-        pwmDes = [0,0]
-        # xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+        # # Just jump
+        # pos = []
+        # pos.append(13 * 65536)
+        # pos.append(1)
+        # pwmDes = [0,0]
+        # # xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+        # xb_send(0, command.PID_START_MOTORS, "0")
+        # # xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
+        # print pos
+        # time.sleep(params.duration/1000.0)
+        # xb_send(0, command.PID_STOP_MOTORS, "0")
+        temp = [0]
+        xb_send(0, command.RESET_BODY_ANG, "0")
         xb_send(0, command.PID_START_MOTORS, "0")
-        # xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
-        print pos
+        xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
         time.sleep(params.duration/1000.0)
         xb_send(0, command.PID_STOP_MOTORS, "0")
 

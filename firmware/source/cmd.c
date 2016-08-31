@@ -214,6 +214,7 @@ unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigne
     pidObjs[0].mode = 0;
     pidStartTimedTrial(run_time);
 
+
     return 1;
 }
 
@@ -263,9 +264,9 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     // EnableIntT1;
     /// HIGHJACKING FUNCTION 8/3/2016 FOR PROP GAINS
     int Kpr = frame[0] + (frame[1] << 8);
-    int Kpy = frame[2] + (frame[3] << 8);
-    pidSetGains(2,Kpr,0,Kpr/2,0,0);
-    pidSetGains(3,Kpy,0,Kpy/2,0,0);
+    int Kdr = frame[2] + (frame[3] << 8);
+    pidSetGains(2,Kpr,0,Kdr,0,0);
+    // pidSetGains(3,Kpy,0,Kdy,0,0);
     return 1;
  } 
 
@@ -360,6 +361,7 @@ unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status, unsign
     pidObjs[i].p_input = pidObjs[i].p_state;
     pidOn(i);
     }
+    setPitchControlFlag(1);
 
     return 1;
 }
