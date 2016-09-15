@@ -25,7 +25,6 @@ def main():
     motorgains = [600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
     thrustGains = [0,200]
-    thrustGains = [0,0]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
     duration = 5000
     rightFreq = 0
