@@ -42,7 +42,7 @@ def format_packet(packet):
   return packet
   
 class PacketParser(threading.Thread):
-  def __init__(self, device='/dev/ttyUSB0',baud=230400):
+  def __init__(self, device='/dev/ttyUSB0',baud=1300000,stopbits=2):
     threading.Thread.__init__(self)
     self.daemon = True
 
