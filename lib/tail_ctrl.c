@@ -94,11 +94,11 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         interrupt_count = 0;
 
         if(pitchControlFlag == 0){
-            LED_2 = 0;
+            //LED_2 = 0;
             // Control/motor off
             pidObjs[0].onoff = 0;
         } else {
-            LED_2 = 1;
+            //LED_2 = 1;
             // Control pitch
             pidObjs[0].p_input = pitchSetpoint;
             pidObjs[2].p_input = 0;
