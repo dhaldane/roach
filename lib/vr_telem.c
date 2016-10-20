@@ -13,6 +13,8 @@
 #include "adc_pid.h"
 #include "tih.h"
 #include "pid-ip2.5.h"
+#include "protocol.h"
+#include "utils.h"
 
 // TODO (apullin) : Remove externs by adding getters to other modules
 //extern pidObj motor_pidObjs[NUM_MOTOR_PIDS];
@@ -22,7 +24,8 @@
 extern int bemf[NUM_PIDS];
 extern pidPos pidObjs[NUM_PIDS];
 
-extern EncObj motPos;
+extern packet_union_t* last_bldc_packet;
+extern uint8_t last_bldc_packet_is_new;
 
 //void vrTelemGetData(unsigned char* ptr) {
 void vrTelemGetData(vrTelemStruct_t* ptr) {
@@ -39,14 +42,20 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     //Motion control
     ptr->posTail = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
     ptr->posFemur = (long)((encPos[1].pos-encPos[1].offset) << 2)+ (encPos[1].oticks << 16);
-    ptr->posMotor = -(motPos.oticks << 16) - (long)(motPos.pos << 2);
+    
     ptr->pitch = pidObjs[0].p_state;
     ptr->roll = pidObjs[2].p_state;
     ptr->yaw = pidObjs[3].p_state;
     ptr->pitchSet = pidObjs[0].p_input + pidObjs[0].interpolate;
     ptr->motorSet = pidObjs[1].p_input + pidObjs[1].interpolate;
     ptr->dcTail = pidObjs[0].output; // left
-    ptr->dcBLDC = pidObjs[1].output; // right
+
+    sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
+    ptr->posMotor = sensor_data->position;
+    ptr->dcBLDC = sensor_data->current;
+    last_bldc_packet_is_new = 0;
+    LED_3 = 0;
+
     ptr->dcProp1 = pidObjs[2].output; // Rear
     ptr->dcProp2 = pidObjs[3].output; // Fore
 

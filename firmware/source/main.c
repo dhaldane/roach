@@ -83,8 +83,11 @@ static test_function rx_function;
 
 packet_union_t uart_tx_packet;
 unsigned int uart_tx_count;
+unsigned int control_count;
 
 volatile CircArray fun_queue;
+
+#define TX_COUNT_MAX 285
 
 int main() {
 
@@ -117,9 +120,10 @@ int main() {
     command_data->position_setpoint = 0x01234567;
     command_data->current_setpoint = 0x89ABCDEF;
 
-    // TODO: create real callback function to enqueue RX data to flash write
-    uart_tx_count = 400;
-    uartInit(&cmdPushFunc);
+    // UART communication to mbed BLDC controller
+    uart_tx_count = TX_COUNT_MAX; // number of main loops per control send
+    control_count = 0;
+    uartInit();
 
     // Need delay for encoders to be ready
     delay_ms(100);
@@ -142,7 +146,10 @@ int main() {
         // Send outgoing UART packets at about 100Hz
         if(--uart_tx_count == 0) {
             uartSend(uart_tx_packet.packet.header.length, (unsigned char*)&(uart_tx_packet.raw));
-            uart_tx_count = 400;
+            uart_tx_count = TX_COUNT_MAX;
+            if(((++control_count) % 50) == 0) {
+                LED_1 ^= 1;
+            }
         }
 
         // move received packets to function queue
