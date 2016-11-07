@@ -317,7 +317,7 @@ extern volatile unsigned char uart_tx_flag;
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     int j,i;
-    LED_3 = 1;
+    //LED_3 = 1;
     interrupt_count++;
 
     //Telemetry save, at 1Khz
@@ -366,7 +366,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
             tiHSetDC(2, pidObjs[1].pwmDes);
         }
     }
-    LED_3 = 0;
+    //LED_3 = 0;
     _T1IF = 0;
 }
 
@@ -552,7 +552,8 @@ void UpdatePID(pidPos *pid, int num)
             pid->output = 0; LED_1=1;
         }
         if(pos>max_pos && pid->preSat > 0){
-            pid->output = 0; LED_2 = 1;
+            pid->output = 0;
+            //LED_2 = 1;
         }
         if (pid->preSat > max) 
         {       pid->output = max; 
