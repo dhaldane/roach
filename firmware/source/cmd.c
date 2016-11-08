@@ -20,6 +20,10 @@
 #include "ams-enc.h"
 #include "carray.h"
 #include "telem.h"
+#include "uart_driver.h"
+#include "protocol.h"
+#include "tail_ctrl.h"
+#include "experiment.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +37,8 @@ extern EncObj encPos[NUM_ENC];
 extern EncObj motPos;
 extern volatile CircArray fun_queue;
 
+packet_union_t uart_tx_packet_cmd;
+
 /*-----------------------------------------------------------------------------
  *          Declaration of static functions
 -----------------------------------------------------------------------------*/
@@ -43,7 +49,6 @@ static unsigned char cmdGetAMSPos(unsigned char type, unsigned char status, unsi
 //Jumper functions
 static unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
-static unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
@@ -55,8 +60,6 @@ static unsigned char cmdPIDStartMotors(unsigned char type, unsigned char status,
 static unsigned char cmdPIDStopMotors(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetVelProfile(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
-static unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
-
 //Experiment/Flash Commands
 static unsigned char cmdStartTimedRun(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdStartTelemetry(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -86,13 +89,11 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_VEL_PROFILE] = &cmdSetVelProfile;
     cmd_func[CMD_WHO_AM_I] = &cmdWhoAmI;
     cmd_func[CMD_ZERO_POS] = &cmdZeroPos;   
-    cmd_func[CMD_SET_PHASE] = &cmdSetPhase;   
     cmd_func[CMD_START_TIMED_RUN] = &cmdStartTimedRun;
     cmd_func[CMD_PID_STOP_MOTORS] = &cmdPIDStopMotors;
 
     cmd_func[CMD_SET_PITCH_SET] = &cmdSetPitchSetpoint;
     cmd_func[CMD_RESET_BODY_ANG] = &cmdresetBodyAngle;
-    cmd_func[CMD_SET_CURRENT_LIMITS] = &cmdSetCurrentLimits;
     cmd_func[CMD_SET_MOTOR_POS] = &cmdSetMotorPos;
     cmd_func[CMD_START_EXP] = &cmdStartExperiment;
 
@@ -146,13 +147,11 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 }
 // ==== Jumper Commands ==============================================================================
 // =============================================================================================================
-#include "tail_ctrl.h"
-#include "as5047.h"
-#include "experiment.h"
 
 
 unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    expStart();
+    uint8_t mode = frame[0];
+    expStart(mode);
     return 1;
 }
 
@@ -176,27 +175,16 @@ unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsign
 
 unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     long pos = 0;
-    // unsigned short offs = frame[4] + (frame[5] << 8);
-    int relative_flag = frame[4] + (frame[5] << 8);
+    //int relative_flag = frame[4] + (frame[5] << 8);
+
     int i;
-    // setMotZero(offs);
     for (i = 0; i < 4; i++)
     {
         pos += ((long)frame[i] << 8*i );
     }
-    if (relative_flag){
-        pidObjs[1].p_input += pos;
-    } else {
-        pidObjs[1].p_input = pos;
-    }
-    return 1;
-}
 
-unsigned char cmdSetCurrentLimits(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
-    int max = frame[0] + (frame[1] << 8);
-    int min = frame[2] + (frame[3] << 8);
-    setMotMax(max);
-    setMotMin(min);
+    send_command_packet(&uart_tx_packet_cmd, pos, 0, 2); 
+
     return 1;
 }
 
@@ -385,21 +373,6 @@ unsigned char cmdZeroPos(unsigned char type, unsigned char status, unsigned char
     pidZeroPos(1);
     return 1;
 }
-
-unsigned char cmdSetPhase(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr) {
-    long offset = 0, error;
-    int i;
-    for (i = 0; i < 4; i++)
-    {
-        offset += ((long)frame[i] << 8*i );
-    }
-    error = offset - ((pidObjs[0].p_state & 0x0000FFFF) - (pidObjs[1].p_state & 0x0000FFFF)); 
-    
-    pidObjs[0].p_input = pidObjs[0].p_state + error/2;
-    pidObjs[1].p_input = pidObjs[1].p_state - error/2;
-    return 1;
-}
-
 
 void cmdError() {
     int i;

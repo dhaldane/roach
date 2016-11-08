@@ -47,7 +47,6 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
     ptr->roll = pidObjs[2].p_state;
     ptr->yaw = pidObjs[3].p_state;
     ptr->pitchSet = pidObjs[0].p_input + pidObjs[0].interpolate;
-    ptr->motorSet = pidObjs[1].p_input + pidObjs[1].interpolate;
     ptr->dcTail = pidObjs[0].output; // left
 
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);

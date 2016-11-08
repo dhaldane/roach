@@ -5,6 +5,8 @@
 #include "tail_ctrl.h"
 #include "led.h"
 #include "mpu6000.h"
+#include "uart_driver.h"
+#include "protocol.h"
 // #include "math.h"
 #include "lut.h"
 
@@ -13,17 +15,23 @@
 #define LSB2ENCRAD 0.000095873799
 #define ENCRAD2LSB 10430
 
-#define EXP_IDLE        0
-#define EXP_START       1
-#define EXP_JUMP_TRIG   2
-#define EXP_JUMP        3
-#define EXP_READY_LEG   4
-#define EXP_STOP        5
+#define EXP_IDLE            0
+
+#define EXP_WJ_START        1
+#define EXP_WJ_JUMP_TRIG    2
+#define EXP_WJ_JUMP         3
+#define EXP_WJ_READY_LEG    4
+#define EXP_WJ_STOP         5
+
+#define EXP_SJ_START        6
+#define EXP_SJ_STOP         7
 
 volatile unsigned char  exp_state = EXP_IDLE;
 volatile unsigned long t_start;
 
+packet_union_t uart_tx_packet_global;
 
+#define MOT_FLAG_STOP 0x80
 
 extern EncObj motPos;
 extern EncObj encPos[NUM_ENC];
@@ -35,55 +43,104 @@ extern long body_angle[3];
 void expFlow() {
     int gdata[3];
     mpuGetGyro(gdata);
+// Wall Jump
     switch(exp_state) {
-        case EXP_STOP:
+        case EXP_WJ_STOP:
             if((t1_ticks-t_start) > 600){
                 pidObjs[0].onoff = 0;
-                pidObjs[1].onoff = 0;
+                pidObjs[2].onoff = 0;
+                pidObjs[3].onoff = 0;
+                send_command_packet(&uart_tx_packet_global, 0, 0, 0);
                 exp_state = EXP_IDLE;
             } else {
-                exp_state = EXP_STOP;
+                exp_state = EXP_WJ_STOP;
             }
             break;
-        case EXP_READY_LEG:
-            // exp_state = EXP_READY_LEG;
-            exp_state = EXP_READY_LEG;
+        case EXP_WJ_READY_LEG:
+            // exp_state = EXP_WJ_READY_LEG;
+            exp_state = EXP_WJ_READY_LEG;
             if(footContact() == 1 || gdata[2] < -6000){
-                pidObjs[1].p_input = ((long)12 << 16); 
+                send_command_packet(&uart_tx_packet_global, 4941297, 0, 2);
                 setPitchSetpoint(900000);
-                exp_state = EXP_STOP;
+                exp_state = EXP_WJ_STOP;
             }
             break;
-        case EXP_JUMP:
-            pidObjs[1].p_input = ((long)12 << 16); // Move to 12 revs forward
-            exp_state = EXP_JUMP;
+        case EXP_WJ_JUMP:
+            send_command_packet(&uart_tx_packet_global, 4941297, 0, 2); // Move to 12 revs forward
+            exp_state = EXP_WJ_JUMP;
             if((t1_ticks-t_start) > 100){
                 setPitchSetpoint(1000000);
-                pidObjs[1].p_input = ((long)1 << 16);
+                send_command_packet(&uart_tx_packet_global, 411774, 0, 2);
             }
-            // if((t1_ticks-t_start) > 200){exp_state = EXP_READY_LEG;}
-            if((t1_ticks-t_start) > 280){exp_state = EXP_READY_LEG;}
+            // if((t1_ticks-t_start) > 200){exp_state = EXP_WJ_READY_LEG;}
+            if((t1_ticks-t_start) > 280){exp_state = EXP_WJ_READY_LEG;}
             break;          
-        case EXP_JUMP_TRIG:
-            exp_state = EXP_JUMP_TRIG;
+        case EXP_WJ_JUMP_TRIG:
+            exp_state = EXP_WJ_JUMP_TRIG;
             if(body_angle[2] < -175000 ){
-                exp_state = EXP_JUMP; 
+                exp_state = EXP_WJ_JUMP; 
                 t_start = t1_ticks;
             }
             break;
-        case EXP_START:
+        case EXP_WJ_START:
             pidObjs[0].timeFlag = 0;
-            pidObjs[1].timeFlag = 0;
             resetBodyAngle();
             setPitchControlFlag(1);
             setPitchSetpoint(-551287); //25 degrees forward
             pidSetInput(0, 0);
             pidOn(0);
-            pidSetInput(1, 0);
-            pidObjs[1].p_input = pidObjs[1].p_state;
-            pidOn(1);
-            exp_state = EXP_JUMP_TRIG;
+            send_command_packet(&uart_tx_packet_global, 0, 0, 0); // send command packet
+
+            exp_state = EXP_WJ_JUMP_TRIG;
             break;
+        default:
+            exp_state = EXP_IDLE;
+            break;
+
+    }
+// Single Jump
+    switch(exp_state) {
+
+        case EXP_SJ_STOP:
+            if((t1_ticks-t_start) > 200){
+                pidObjs[0].onoff = 0;
+                pidObjs[2].onoff = 0;
+                pidObjs[3].onoff = 0;
+                send_command_packet(&uart_tx_packet_global, 0, 0, 0);
+                exp_state = EXP_IDLE;
+            } else {
+                exp_state = EXP_SJ_STOP;
+            }
+            break;
+
+        case EXP_SJ_START:
+            pidObjs[0].timeFlag = 0;
+            resetBodyAngle();
+            setPitchControlFlag(1);
+            setPitchSetpoint(-551287); //25 degrees forward
+            pidSetInput(0, 0);
+            pidOn(0);
+            send_command_packet(&uart_tx_packet_global, 4941297, 0, 2); // send command packet
+            exp_state = EXP_SJ_STOP;
+            break;
+
+        default:
+            exp_state = EXP_IDLE;
+            break;
+        }
+
+}
+
+void expStart(uint8_t mode) {
+    switch(mode){
+        case EXP_WALL_JUMP:
+            exp_state = EXP_WJ_START;
+            break;
+
+        case EXP_SINGLE_JUMP:
+            exp_state = EXP_SJ_START;
+            break;
+
         default:
             exp_state = EXP_IDLE;
             break;
@@ -91,15 +148,29 @@ void expFlow() {
     }
 }
 
-void expStart() {
-    exp_state = EXP_START;
+void send_command_packet(packet_union_t *uart_tx_packet, int32_t position, uint32_t current, uint8_t flags){
+    // Create dummy UART TX packet
+    uart_tx_packet->packet.header.start = PKT_START_CHAR;
+    uart_tx_packet->packet.header.type = PKT_TYPE_COMMAND;
+    uart_tx_packet->packet.header.length = sizeof(header_t) + sizeof(command_data_t) + 1;
+    command_data_t* command_data = (command_data_t*)&(uart_tx_packet->packet.data_crc);
+    
+    // Settable things
+    uart_tx_packet->packet.header.flags = flags;
+    command_data->position_setpoint = position;
+    command_data->current_setpoint = current;
+    uartSend(uart_tx_packet->packet.header.length, (unsigned char*)&(uart_tx_packet->raw));
+
 }
 
+extern packet_union_t* last_bldc_packet;
+extern uint8_t last_bldc_packet_is_new;
 
 char footContact(void) {
     int eps = 3000;
     unsigned int mot, femur;
-    mot = (unsigned int)(calibPos(0)*motPos_to_femur_crank_units);
+    sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
+    mot = (unsigned int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
     femur = crankFromFemur();
     if ( mot+800>femur && (mot+800 - femur) > eps)
     {
@@ -133,16 +204,9 @@ long calibPos(char idx){
     }
 }
 
-// long crankFromFemur(void) { // TODO: Avoid float conversion
-//     float femur, crank;
-//     femur = calibPos(2) * LSB2ENCRAD;
-//     crank = 2.003*powf(femur,5.0) - 7.434*powf(femur,4.0) + 9.429*powf(femur,3.0) - 2.691*powf(femur,2.0) + 0.3893*femur - 0.001175;
-//     return (long) (crank * ENCRAD2LSB);
-// }
-
 unsigned int crankFromFemur(void) { 
     unsigned int femur;
-    femur = calibPos(2) / 64;
+    femur = calibPos(2) / 256; // Scale position to 8 bits
     if(femur>255){femur=255;}
     if(femur<0){femur=0;} 
     return crank_femur_256lut[femur];

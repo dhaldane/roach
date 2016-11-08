@@ -317,7 +317,6 @@ extern volatile unsigned char uart_tx_flag;
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     int j,i;
-    //LED_3 = 1;
     interrupt_count++;
 
     //Telemetry save, at 1Khz
@@ -330,7 +329,6 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
     if(interrupt_count == 4) {
         mpuBeginUpdate();
         amsEncoderStartAsyncRead();
-        // as5047EncoderUpdatePos();
     }
     //PID controller update
     else if(interrupt_count == 5)
@@ -434,12 +432,6 @@ void pidGetState()
     pidObjs[0].p_state = body_angle[2];
     pidObjs[2].p_state = body_angle[1];
     pidObjs[3].p_state = body_angle[0];
-    pidObjs[1].p_state = -p_state;
-
-    velocity = (pidObjs[1].p_state - oldpos[1]) / 64;  // Encoder ticks per ms
-    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
-    if(velocity < -0x7fff) velocity = -0x7fff;	
-    pidObjs[1].v_state = (int) velocity;
 
     tail_pos = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
 
@@ -537,37 +529,8 @@ void UpdatePID(pidPos *pid, int num)
     			pid->i_error = (long) pid->i_error + 
     				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
     				/ ((long)GAIN_SCALER);		
-    	}
-    } else if(num==1){ 
-
-    // BLDC motor
-        pid->preSat = pid->feedforward + (pid->p ) +
-             ((pid->i ) >> 6) +  // divide by 64
-             (pid->d >> 12); // divide by 64
-        pid->output = pid->preSat;
-        int max = getMotMax();
-        int min = getMotMin();
-        long pos = pidObjs[1].p_state;
-        if(pos<min_pos && pid->preSat < 0){
-            pid->output = 0; LED_1=1;
-        }
-        if(pos>max_pos && pid->preSat > 0){
-            pid->output = 0;
-            //LED_2 = 1;
-        }
-        if (pid->preSat > max) 
-        {       pid->output = max; 
-                pid->i_error = (long) pid->i_error + 
-                    (long)(pid->Kaw) * ((long)(max) - (long)(pid->preSat)) 
-                    / ((long)GAIN_SCALER);      
-        }      
-        if (pid->preSat < min)
-          {     pid->output = min; 
-                pid->i_error = (long) pid->i_error + 
-                    (long)(pid->Kaw) * ((long)(min) - (long)(pid->preSat)) 
-                    / ((long)GAIN_SCALER);      
-        }
-    }
+    	   }
+        } 
     }   
 }
 

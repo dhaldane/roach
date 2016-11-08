@@ -12,9 +12,8 @@ typedef struct {
     int32_t pitch; // estimated angles
     int32_t roll;
     int32_t yaw;
-    int32_t pitchSet; // Commanded Hall angle position
-    int32_t motorSet;
-    
+    int32_t pitchSet; // Commanded Hall angle position 
+   
     int16_t dcTail; // PWM duty cycle
     int16_t dcProp1; // PWM duty cycle
     int16_t dcProp2; // PWM duty cycle

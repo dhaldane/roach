@@ -59,7 +59,6 @@
 #include "radio.h"
 #include "tih.h"
 #include "ams-enc.h"
-#include "as5047.h"
 #include "settings.h"
 #include "tests.h" // TODO (fgb) : define/includes need to live elsewhere
 #include "dfmem.h"
@@ -81,13 +80,14 @@ static Payload rx_payload;
 static MacPacket rx_packet;
 static test_function rx_function;
 
-packet_union_t uart_tx_packet;
+packet_union_t uart_tx_packet_Test;
 unsigned int uart_tx_count;
 unsigned int control_count;
 
 volatile CircArray fun_queue;
 
 #define TX_COUNT_MAX 285
+
 
 int main() {
 
@@ -111,14 +111,7 @@ int main() {
     radioSetSrcAddr(RADIO_SRC_ADDR);
     radioSetSrcPanID(RADIO_PAN_ID);
 
-    // Create dummy UART TX packet
-    uart_tx_packet.packet.header.start = PKT_START_CHAR;
-    uart_tx_packet.packet.header.type = PKT_TYPE_COMMAND;
-    uart_tx_packet.packet.header.length = sizeof(header_t) + sizeof(command_data_t) + 1;
-    uart_tx_packet.packet.header.flags = 0;
-    command_data_t* command_data = (command_data_t*)&(uart_tx_packet.packet.data_crc);
-    command_data->position_setpoint = 0x01234567;
-    command_data->current_setpoint = 0x89ABCDEF;
+    
 
     // UART communication to mbed BLDC controller
     uart_tx_count = TX_COUNT_MAX; // number of main loops per control send
@@ -128,7 +121,6 @@ int main() {
     // Need delay for encoders to be ready
     delay_ms(100);
     amsEncoderSetup();
-    asSetup();
     
     mpuSetup();
     tiHSetup();
@@ -144,13 +136,13 @@ int main() {
         radioProcess();
 
         // Send outgoing UART packets at about 100Hz
-        if(--uart_tx_count == 0) {
-            uartSend(uart_tx_packet.packet.header.length, (unsigned char*)&(uart_tx_packet.raw));
-            uart_tx_count = TX_COUNT_MAX;
-            if(((++control_count) % 50) == 0) {
-                LED_1 ^= 1;
-            }
-        }
+        // if(--uart_tx_count == 0) {
+        //     uartSend(uart_tx_packet.packet.header.length, (unsigned char*)&(uart_tx_packet.raw));
+        //     uart_tx_count = TX_COUNT_MAX;
+        //     if(((++control_count) % 50) == 0) {
+        //         LED_1 ^= 1;
+        //     }
+        // }
 
         // move received packets to function queue
         while (!radioRxQueueEmpty()) {
