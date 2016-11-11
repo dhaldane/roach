@@ -146,11 +146,9 @@ def settingsMenu(params, manParams):
             pos = []
             pos.append(temp[0] * 65536)
             pos.append(1)
-            xb_send(0, command.PID_START_MOTORS, "0")
             xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
             print pos
-            time.sleep(params.duration/1000.0)
-            xb_send(0, command.PID_STOP_MOTORS, "0")
+
 
         elif keypress == 'g':
             print 'Channel, motor gains [Kp Ki Kd Kanti-wind ff]=', params.motorgains[5:11]  

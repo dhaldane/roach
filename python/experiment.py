@@ -26,7 +26,7 @@ def main():
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
     thrustGains = [0,200]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
-    duration = 5000
+    duration = 2000
     rightFreq = 0
     leftFreq = 0
     phase = 0
@@ -67,27 +67,18 @@ def main():
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
 
-        #Start robot
-        # xb_send(0, command.START_EXPERIMENT, "0")
-        # time.sleep(params.duration / 1000.0)
+        #Start robot 0: wall jump, 1: single jump
+        exp = [1] 
+        xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
+        time.sleep(params.duration / 1000.0)
 
-        # # Just jump
-        # pos = []
-        # pos.append(13 * 65536)
-        # pos.append(1)
-        # pwmDes = [0,0]
-        # # xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+
+        # temp = [0]
+        # xb_send(0, command.RESET_BODY_ANG, "0")
         # xb_send(0, command.PID_START_MOTORS, "0")
-        # # xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
-        # print pos
+        # xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
         # time.sleep(params.duration/1000.0)
         # xb_send(0, command.PID_STOP_MOTORS, "0")
-        temp = [0]
-        xb_send(0, command.RESET_BODY_ANG, "0")
-        xb_send(0, command.PID_START_MOTORS, "0")
-        xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
-        time.sleep(params.duration/1000.0)
-        xb_send(0, command.PID_STOP_MOTORS, "0")
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

@@ -183,6 +183,7 @@ unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned 
         pos += ((long)frame[i] << 8*i );
     }
 
+    
     send_command_packet(&uart_tx_packet_cmd, pos, 0, 2); 
 
     return 1;

@@ -45,6 +45,7 @@ void expFlow() {
     mpuGetGyro(gdata);
 // Wall Jump
     switch(exp_state) {
+
         case EXP_WJ_STOP:
             if((t1_ticks-t_start) > 600){
                 pidObjs[0].onoff = 0;
@@ -93,16 +94,9 @@ void expFlow() {
 
             exp_state = EXP_WJ_JUMP_TRIG;
             break;
-        default:
-            exp_state = EXP_IDLE;
-            break;
-
-    }
 // Single Jump
-    switch(exp_state) {
-
         case EXP_SJ_STOP:
-            if((t1_ticks-t_start) > 200){
+            if((t1_ticks-t_start) > 300){
                 pidObjs[0].onoff = 0;
                 pidObjs[2].onoff = 0;
                 pidObjs[3].onoff = 0;
@@ -117,11 +111,12 @@ void expFlow() {
             pidObjs[0].timeFlag = 0;
             resetBodyAngle();
             setPitchControlFlag(1);
-            setPitchSetpoint(-551287); //25 degrees forward
+            setPitchSetpoint(0); //25 degrees forward
             pidSetInput(0, 0);
             pidOn(0);
-            send_command_packet(&uart_tx_packet_global, 4941297, 0, 2); // send command packet
+            send_command_packet(&uart_tx_packet_global, 6173491, 0, 2); // send command packet
             exp_state = EXP_SJ_STOP;
+            t_start = t1_ticks;
             break;
 
         default:

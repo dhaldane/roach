@@ -111,7 +111,14 @@ int main() {
     radioSetSrcAddr(RADIO_SRC_ADDR);
     radioSetSrcPanID(RADIO_PAN_ID);
 
-    
+    // Create dummy UART TX packet
+    uart_tx_packet_Test.packet.header.start = PKT_START_CHAR;
+    uart_tx_packet_Test.packet.header.type = PKT_TYPE_COMMAND;
+    uart_tx_packet_Test.packet.header.length = sizeof(header_t) + sizeof(command_data_t) + 1;
+    uart_tx_packet_Test.packet.header.flags = 0;
+    command_data_t* command_data = (command_data_t*)&(uart_tx_packet_Test.packet.data_crc);
+    command_data->position_setpoint = 0x01;
+    command_data->current_setpoint = 0x89ABCDEF;
 
     // UART communication to mbed BLDC controller
     uart_tx_count = TX_COUNT_MAX; // number of main loops per control send
@@ -135,14 +142,14 @@ int main() {
         // Send outgoing radio packets
         radioProcess();
 
-        // Send outgoing UART packets at about 100Hz
-        // if(--uart_tx_count == 0) {
-        //     uartSend(uart_tx_packet.packet.header.length, (unsigned char*)&(uart_tx_packet.raw));
-        //     uart_tx_count = TX_COUNT_MAX;
-        //     if(((++control_count) % 50) == 0) {
-        //         LED_1 ^= 1;
-        //     }
-        // }
+//         Send outgoing UART packets at about 100Hz
+//        if(--uart_tx_count == 0) {
+//            uartSend(uart_tx_packet_Test.packet.header.length, (unsigned char*)&(uart_tx_packet_Test.raw));
+//            uart_tx_count = TX_COUNT_MAX;
+//            if(((++control_count) % 50) == 0) {
+//                LED_1 ^= 1;
+//            }
+//        }
 
         // move received packets to function queue
         while (!radioRxQueueEmpty()) {
