@@ -443,9 +443,9 @@ void pidGetState()
 
     int gdata[3];   
     mpuGetGyro(gdata);
-    pidObjs[0].v_state = gdata[2]; // Pitch angle
+    pidObjs[0].v_state = gdata[0]; // Pitch angle
     pidObjs[2].v_state = gdata[1]; // Roll angle
-    pidObjs[3].v_state = gdata[0]; // Yaw angle
+    pidObjs[3].v_state = gdata[2]; // Yaw angle
 }
 
 

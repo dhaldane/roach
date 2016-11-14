@@ -50,6 +50,31 @@ class _GetchWindows:
 
 getch = _Getch()
 
+class sjParams:
+    duration = [];
+    leg_extension = [];
+    def __init__(self, duration, leg_extension):
+        self.duration = duration
+        self.leg_extension = leg_extension
+
+class wjParams:
+    launch_angle        = []
+    launch_threshold    = []
+    landing_angle       = []
+    leg_extension       = []
+    leg_retraction      = []
+    launch_angle        = []
+    def set(self):
+        temp = [0] + [self.launch_angle] +[self.launch_threshold] +[self.landing_angle] +[self.leg_extension] +[self.leg_retraction]
+        print temp
+        xb_send(0, command.SET_EXP_PARAMS, pack('6l', *temp))
+    def __init__(self, launch_angle, launch_threshold, landing_angle, leg_extension, leg_retraction):
+        self.launch_angle = launch_angle
+        self.launch_threshold = launch_threshold
+        self.landing_angle = landing_angle
+        self.leg_extension = leg_extension
+        self.leg_retraction = leg_retraction
+
 class hallParams:
     motorgains = []
     duration = []
@@ -109,7 +134,7 @@ def menu():
     print "e:right+   |d:right-   |c:right off  |<sp>: all off"
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
-def settingsMenu(params, manParams):
+def settingsMenu(params, sj_params, wj_params):
     print "t:duration   |m:telemetry   |p = motion profile  |b = Motor position   |n = deltas"
     print "Proceed: Space Bar"
     while True:
@@ -134,12 +159,11 @@ def settingsMenu(params, manParams):
                 print 'narp'
         elif keypress == 'e':
                 xb_send(0, command.GET_IMU_DATA, "0")
-
         elif keypress == 'd':
             import pdb
             pdb.set_trace()
         elif keypress == 'b':
-            print 'Set Motor Position (revs)'
+            print 'Set Motor Position (radians)'
             x = raw_input()
             if len(x):
                 temp = map(int,x.split(','))
@@ -148,8 +172,6 @@ def settingsMenu(params, manParams):
             pos.append(1)
             xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
             print pos
-
-
         elif keypress == 'g':
             print 'Channel, motor gains [Kp Ki Kd Kanti-wind ff]=', params.motorgains[5:11]  
             x = None
@@ -173,9 +195,7 @@ def settingsMenu(params, manParams):
                     print 'Gains set:', motor
                 else:
                     print 'not enough values'            
-
         elif keypress == 'p':
-
             print 'Set Body Angle (degrees)'
             x = raw_input()
             if len(x):
@@ -186,7 +206,27 @@ def settingsMenu(params, manParams):
                 xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
                 time.sleep(params.duration/1000.0)
                 xb_send(0, command.PID_STOP_MOTORS, "0")
-
+        elif keypress == 's':
+            print 'Set single jumps params (duration ms, leg extension 10rad): ', [sj_params.duration, sj_params.leg_extension]
+            x = raw_input()
+            if len(x):
+                temp = map(int,x.split(','))
+                sj_params.duration = temp[0]
+                sj_params.leg_extension = temp[1]
+                temp = [1] + temp
+                xb_send(0, command.SET_EXP_PARAMS, pack('Bhh', *temp))
+        elif keypress == 'w':
+            print 'Set wall jumps params (launch angle, launch threshold, landing angle, leg extension, leg retraction): ', [sj_params.duration, sj_params.leg_extension]
+            x = raw_input()
+            if len(x):
+                temp = map(int,x.split(','))
+                wj_params.launch_angle      = temp[0]
+                wj_params.launch_threshold  = temp[1]
+                wj_params.landing_angle     = temp[2]
+                wj_params.leg_extension     = temp[3]
+                wj_params.leg_retraction    = temp[4]
+                temp = [0] + temp
+                xb_send(0, command.SET_EXP_PARAMS, pack('B5l', *temp))
         elif keypress == 'q': 
             print "Exit."
             shared.xb.halt()

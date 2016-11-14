@@ -20,14 +20,18 @@
 #define EXP_WJ_START        1
 #define EXP_WJ_JUMP_TRIG    2
 #define EXP_WJ_JUMP         3
-#define EXP_WJ_READY_LEG    4
-#define EXP_WJ_STOP         5
+#define EXP_WJ_RETRACT      4
+#define EXP_WJ_READY_LEG    5
+#define EXP_WJ_STOP         6
 
-#define EXP_SJ_START        6
-#define EXP_SJ_STOP         7
+#define EXP_SJ_START        7
+#define EXP_SJ_STOP         8
 
 volatile unsigned char  exp_state = EXP_IDLE;
 volatile unsigned long t_start;
+
+experiment_params_sj_t sj_params;
+experiment_params_wj_t wj_params;
 
 packet_union_t uart_tx_packet_global;
 
@@ -58,27 +62,30 @@ void expFlow() {
             }
             break;
         case EXP_WJ_READY_LEG:
-            // exp_state = EXP_WJ_READY_LEG;
             exp_state = EXP_WJ_READY_LEG;
-            if(footContact() == 1 || gdata[2] < -6000){
-                send_command_packet(&uart_tx_packet_global, 4941297, 0, 2);
-                setPitchSetpoint(900000);
+            if(footContact() == 1 || gdata[0] < -6000){
+                LED_2 = !LED_2;
+                send_command_packet(&uart_tx_packet_global, wj_params.leg_extension, 0, 2);
+                setPitchSetpoint(900000);  
                 exp_state = EXP_WJ_STOP;
             }
             break;
-        case EXP_WJ_JUMP:
-            send_command_packet(&uart_tx_packet_global, 4941297, 0, 2); // Move to 12 revs forward
-            exp_state = EXP_WJ_JUMP;
-            if((t1_ticks-t_start) > 100){
-                setPitchSetpoint(1000000);
-                send_command_packet(&uart_tx_packet_global, 411774, 0, 2);
-            }
-            // if((t1_ticks-t_start) > 200){exp_state = EXP_WJ_READY_LEG;}
+        case EXP_WJ_RETRACT:
+            exp_state = EXP_WJ_RETRACT;
             if((t1_ticks-t_start) > 280){exp_state = EXP_WJ_READY_LEG;}
-            break;          
+            break;     
+        case EXP_WJ_JUMP:
+            exp_state = EXP_WJ_JUMP;
+            if((t1_ticks-t_start) > 200){
+                setPitchSetpoint(wj_params.landing_angle); // 1000000
+                send_command_packet(&uart_tx_packet_global, wj_params.leg_retraction, 0, 2); // 411774
+                exp_state = EXP_WJ_RETRACT;
+            }
+            break;     
         case EXP_WJ_JUMP_TRIG:
             exp_state = EXP_WJ_JUMP_TRIG;
-            if(body_angle[2] < -175000 ){
+            if(body_angle[2] < wj_params.launch_threshold){ // -175000
+                send_command_packet(&uart_tx_packet_global, wj_params.leg_extension, 0, 2); //4941297 Move to 12 revs forward
                 exp_state = EXP_WJ_JUMP; 
                 t_start = t1_ticks;
             }
@@ -87,16 +94,14 @@ void expFlow() {
             pidObjs[0].timeFlag = 0;
             resetBodyAngle();
             setPitchControlFlag(1);
-            setPitchSetpoint(-551287); //25 degrees forward
+            setPitchSetpoint(wj_params.launch_angle); //-551287 25 degrees forward
             pidSetInput(0, 0);
             pidOn(0);
-            send_command_packet(&uart_tx_packet_global, 0, 0, 0); // send command packet
-
             exp_state = EXP_WJ_JUMP_TRIG;
             break;
 // Single Jump
         case EXP_SJ_STOP:
-            if((t1_ticks-t_start) > 300){
+            if((t1_ticks-t_start) > sj_params.duration){
                 pidObjs[0].onoff = 0;
                 pidObjs[2].onoff = 0;
                 pidObjs[3].onoff = 0;
@@ -108,13 +113,13 @@ void expFlow() {
             break;
 
         case EXP_SJ_START:
-            pidObjs[0].timeFlag = 0;
-            resetBodyAngle();
-            setPitchControlFlag(1);
-            setPitchSetpoint(0); //25 degrees forward
-            pidSetInput(0, 0);
-            pidOn(0);
-            send_command_packet(&uart_tx_packet_global, 6173491, 0, 2); // send command packet
+             pidObjs[0].timeFlag = 0;
+             resetBodyAngle();
+             setPitchControlFlag(1);
+             setPitchSetpoint(0); //25 degrees forward
+             pidSetInput(0, 0);
+             pidOn(0);
+            send_command_packet(&uart_tx_packet_global, sj_params.leg_extension, 0, 2); // send command packet
             exp_state = EXP_SJ_STOP;
             t_start = t1_ticks;
             break;
@@ -143,6 +148,20 @@ void expStart(uint8_t mode) {
     }
 }
 
+void exp_set_params_sj(int16_t duration, int32_t leg_extension) {
+    sj_params.duration = duration;
+    sj_params.leg_extension = leg_extension;
+}
+
+void exp_set_params_wj(int32_t launch_angle, int32_t launch_threshold, int32_t landing_angle, int32_t leg_extension, int32_t leg_retraction) {
+    wj_params.launch_angle = launch_angle;
+    wj_params.launch_threshold = launch_threshold;
+    wj_params.landing_angle = landing_angle;
+    wj_params.leg_extension = leg_extension;
+    wj_params.leg_retraction = leg_retraction;
+}
+
+
 void send_command_packet(packet_union_t *uart_tx_packet, int32_t position, uint32_t current, uint8_t flags){
     // Create dummy UART TX packet
     uart_tx_packet->packet.header.start = PKT_START_CHAR;
@@ -162,7 +181,7 @@ extern packet_union_t* last_bldc_packet;
 extern uint8_t last_bldc_packet_is_new;
 
 char footContact(void) {
-    int eps = 3000;
+    int eps = 6000;
     unsigned int mot, femur;
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
     mot = (unsigned int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
@@ -201,7 +220,7 @@ long calibPos(char idx){
 
 unsigned int crankFromFemur(void) { 
     unsigned int femur;
-    femur = calibPos(2) / 256; // Scale position to 8 bits
+    femur = calibPos(2) / 64; // Scale position to 8 bits
     if(femur>255){femur=255;}
     if(femur<0){femur=0;} 
     return crank_femur_256lut[femur];

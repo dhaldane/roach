@@ -36,19 +36,16 @@ def main():
     params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
     setMotorGains(motorgains)
 
-    leadIn = 10
-    leadOut = 10
-    strideFreq = 5
-    phase = 0x8000      # Alternating tripod
-    useFlag = 0
-    deltas = [.25, 0.25, 0.25, 0.125, 0.125, 0.5]
+    sj_params = sjParams(300, 800)
+    # wj_params = wjParams(-551287, -50000, 1000000, 4941297, 411774)
+    wj_params = wjParams(-551287, -40000, 80000, 5353068, 411774)
+    wjParams.set(wj_params)
 
-    manParams = manueverParams(leadIn, leadOut, strideFreq, phase, useFlag, deltas)
 
     while True:
 
         if not(params.repeat):
-            settingsMenu(params, manParams)   
+            settingsMenu(params, sj_params, wj_params)   
 
         if params.telemetry:
             # Construct filename
@@ -68,7 +65,7 @@ def main():
             startTelemetrySave(numSamples)
 
         #Start robot 0: wall jump, 1: single jump
-        exp = [1] 
+        exp = [0] 
         xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
         time.sleep(params.duration / 1000.0)
 

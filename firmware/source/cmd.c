@@ -51,6 +51,7 @@ static unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char statu
 static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdSetExperimentParams(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -96,6 +97,7 @@ void cmdSetup(void) {
     cmd_func[CMD_RESET_BODY_ANG] = &cmdresetBodyAngle;
     cmd_func[CMD_SET_MOTOR_POS] = &cmdSetMotorPos;
     cmd_func[CMD_START_EXP] = &cmdStartExperiment;
+    cmd_func[CMD_SET_EXP_PARAMS] = &cmdSetExperimentParams;
 
 }
 
@@ -152,6 +154,39 @@ unsigned char cmdGetAMSPos(unsigned char type, unsigned char status,
 unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     uint8_t mode = frame[0];
     expStart(mode);
+    return 1;
+}
+
+unsigned char cmdSetExperimentParams(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    int32_t mode = frame[0];
+
+    switch(mode) {
+        case EXP_WALL_JUMP: ;
+            int32_t params[5];
+            int i = 0;
+            int j = 0;
+            int idx;
+            for (i = 0; i < 5; i=i+1)
+            {
+                params[i] = 0;
+                for (j = 0; j < 4; j=j+1)
+                {
+                    idx = j+4*i+4;
+                    params[i] += ((long)frame[idx] << 8*j );
+                }
+            }
+            exp_set_params_wj(params[0],params[1],params[2],params[3],params[4]);
+            break;
+        case EXP_SINGLE_JUMP: ;
+            int16_t duration = frame[2] + (frame[3] << 8);
+            int16_t leg_extension = frame[4] + (frame[5] << 8);
+            int32_t conv_leg_extension;
+            conv_leg_extension = (long)(leg_extension)*6554; //1/10 radian to 15.16 radians representation;
+            exp_set_params_sj(duration, conv_leg_extension);
+            break;
+        default:
+            break;
+    }
     return 1;
 }
 

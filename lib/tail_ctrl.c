@@ -38,8 +38,8 @@ void tailCtrlSetup(){
     body_angle[2]=0;
     initPIDObjPos( &(pidObjs[0]), 0,0,0,0,0);
     // initPIDObjPos( &(pidObjs[2]), -500,0,-500,0,0);
-    initPIDObjPos( &(pidObjs[2]), 100,0,100,0,0);
-    initPIDObjPos( &(pidObjs[3]), 100,0,100,0,0); //100,100
+    initPIDObjPos( &(pidObjs[2]), 0,0,0,0,0);
+    initPIDObjPos( &(pidObjs[3]), 0,0,0,0,0); //100,100
     SetupTimer5();
     EnableIntT5;
     pitchControlFlag = 0;
@@ -76,23 +76,21 @@ void resetBodyAngle(){
 //////  Installed to Timer5 @ 1000hz  ////////
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
     interrupt_count++;
-    
-    expFlow();
-    
+      
     if(interrupt_count <= 5) {
         // Do signal processing on gyro
         int gdata[3];
         mpuGetGyro(gdata);
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        if(ABS(gdata[0] + 15)>80){body_angle[0] += gdata[0] + 15;}
-        if(ABS(gdata[1] - 14)>80){body_angle[1] += gdata[1] - 14;}
-        if(ABS(gdata[2] + 14)>80){body_angle[2] += gdata[2] + 14;}
+        if(ABS(gdata[2] - 51)>80){body_angle[0] += gdata[2] - 51;}
+        if(ABS(gdata[1] + 10)>80){body_angle[1] += gdata[1] + 10;}
+        if(ABS(gdata[0] - 15)>80){body_angle[2] += gdata[0] - 15;}
 
     }
     if(interrupt_count == 5) 
     {
         interrupt_count = 0;
-
+        expFlow();
         if(pitchControlFlag == 0){
             //LED_2 = 0;
             // Control/motor off

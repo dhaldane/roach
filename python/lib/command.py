@@ -77,6 +77,7 @@ RESET_BODY_ANG          =   0x97
 SET_CURRENT_LIMITS      =   0x98
 SET_MOTOR_POS           =   0x99
 START_EXPERIMENT        =   0x9A
+SET_EXP_PARAMS          =   0x9B
 
 
 # CMD values of 0xF0(240) - 0xFF(255) are reserved for future use
