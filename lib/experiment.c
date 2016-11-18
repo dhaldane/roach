@@ -63,7 +63,8 @@ void expFlow() {
             break;
         case EXP_WJ_READY_LEG:
             exp_state = EXP_WJ_READY_LEG;
-            if(footContact() == 1 || gdata[0] < -6000){
+            // if(footContact() == 1 || gdata[0] < -6000){
+            if(gdata[0] < -6000){
                 LED_2 = !LED_2;
                 send_command_packet(&uart_tx_packet_global, wj_params.leg_extension, 0, 2);
                 setPitchSetpoint(900000);  
