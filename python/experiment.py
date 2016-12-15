@@ -33,6 +33,7 @@ def main():
     telemetry = True
     repeat = False
 
+    manParams = manueverParams(0, 0, 0, 0, 0, 0) # JY edits: added for compatibility
     params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
     setMotorGains(motorgains)
 

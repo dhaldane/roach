@@ -26,6 +26,8 @@ extern pidPos pidObjs[NUM_PIDS];
 
 char pitchControlFlag;
 long pitchSetpoint;
+long rollSetpoint; // JY edits
+long yawSetpoint; // JY edits
 
 
 void tailCtrlSetup(){
@@ -65,6 +67,14 @@ void setPitchSetpoint(long setpoint){
     pitchSetpoint = setpoint;
 }
 
+void setRollSetpoint(long setpoint){ // JY edits
+    rollSetpoint = setpoint;
+}
+
+void setYawSetpoint(long setpoint){ // JY edits
+    yawSetpoint = setpoint;
+}
+
 void resetBodyAngle(){
     // mpuRunCalib(0,100); //re-offset gyro, assumes stationary
     body_angle[0] = 0;
@@ -81,6 +91,12 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         // Do signal processing on gyro
         int gdata[3];
         mpuGetGyro(gdata);
+
+        // JY edits
+        // update attitude with vicon_attitude
+        // TODO: calibrate Vicon -> python -> Xbee -> ImageProc delay
+        //      integrate gyros over lag time
+
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
         if(ABS(gdata[2] - 51)>80){body_angle[0] += gdata[2] - 51;}
         if(ABS(gdata[1] + 10)>80){body_angle[1] += gdata[1] + 10;}
@@ -99,8 +115,8 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
             //LED_2 = 1;
             // Control pitch
             pidObjs[0].p_input = pitchSetpoint;
-            pidObjs[2].p_input = 0;
-            pidObjs[3].p_input = 0;
+            pidObjs[2].p_input = 0; // roll or yaw
+            pidObjs[3].p_input = 0; // roll or yaw
         }
     }
 
