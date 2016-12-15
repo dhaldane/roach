@@ -3,3 +3,6 @@
 
 # Automatically generated version string header
 version-string.h
+
+*.swp
+*.DS_Store
