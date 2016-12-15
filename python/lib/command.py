@@ -69,6 +69,15 @@ ZERO_POS                =   0x90
 START_TIMED_RUN         =   0x91
 PID_STOP_MOTORS         =   0x92
 SET_PHASE               =   0x93
-SET_MOTOR_MODE      =   0x94
+SET_MOTOR_MODE          =   0x94
+
+SET_TAIL_POS            =   0x95
+SET_PITCH_SET           =   0x96
+RESET_BODY_ANG          =   0x97
+SET_CURRENT_LIMITS      =   0x98
+SET_MOTOR_POS           =   0x99
+START_EXPERIMENT        =   0x9A
+SET_EXP_PARAMS          =   0x9B
+
 
 # CMD values of 0xF0(240) - 0xFF(255) are reserved for future use

@@ -50,6 +50,31 @@ class _GetchWindows:
 
 getch = _Getch()
 
+class sjParams:
+    duration = [];
+    leg_extension = [];
+    def __init__(self, duration, leg_extension):
+        self.duration = duration
+        self.leg_extension = leg_extension
+
+class wjParams:
+    launch_angle        = []
+    launch_threshold    = []
+    landing_angle       = []
+    leg_extension       = []
+    leg_retraction      = []
+    launch_angle        = []
+    def set(self):
+        temp = [0] + [self.launch_angle] +[self.launch_threshold] +[self.landing_angle] +[self.leg_extension] +[self.leg_retraction]
+        print temp
+        xb_send(0, command.SET_EXP_PARAMS, pack('6l', *temp))
+    def __init__(self, launch_angle, launch_threshold, landing_angle, leg_extension, leg_retraction):
+        self.launch_angle = launch_angle
+        self.launch_threshold = launch_threshold
+        self.landing_angle = landing_angle
+        self.leg_extension = leg_extension
+        self.leg_retraction = leg_retraction
+
 class hallParams:
     motorgains = []
     duration = []
@@ -95,6 +120,7 @@ def xb_safe_exit():
 def xb_send(status, type, data):
     payload = chr(status) + chr(type) + ''.join(data)
     shared.xb.tx(dest_addr = shared.DEST_ADDR, data = payload)
+    # print ":".join("{:02x}".format(ord(c)) for c in payload) # Debug printing
 
 #send user selected command
 def rawCommand():
@@ -108,8 +134,8 @@ def menu():
     print "e:right+   |d:right-   |c:right off  |<sp>: all off"
     print "g:R gain   |l: L gain  |t:duration   |v: vel profile |p: proceed"
 
-def settingsMenu(params, manParams):
-    print "t:duration   |m:telemetry   |p = motion profile  |b = Motion queue   |n = deltas"
+def settingsMenu(params, sj_params, wj_params):
+    print "t:duration   |m:telemetry   |p = motion profile  |b = Motor position   |n = deltas"
     print "Proceed: Space Bar"
     while True:
         print '>',
@@ -123,41 +149,89 @@ def settingsMenu(params, manParams):
             params.telemetry = not(params.telemetry)
             print 'Telemetry recording', params.telemetry
         elif keypress == 'o':
-            print 'Enter Duty Cycle (Left,Right) : ',
+            print 'Enter Gains (Roll P, Yaw P) : ',
             x = raw_input()
             if len(x):
-                pwmDes = map(float,x.split(','))
-            xb_send(0, command.SET_MOTOR_MODE, pack('2h', pwmDes))
-            print 'Set Duty cycle: ', pwmDes
+                pwmDes = map(int,x.split(','))
+                xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *pwmDes))
+                print 'Gains: ', pwmDes
+            else:
+                print 'narp'
+        elif keypress == 'e':
+                xb_send(0, command.GET_IMU_DATA, "0")
+        elif keypress == 'd':
+            import pdb
+            pdb.set_trace()
         elif keypress == 'b':
-            print 'Manuever Enabled'
-            manParams.useFlag = True
-            print 'Enter movement string (#Lead in Strides, Lead Out, Stride Frequncy (Hz):',
+            print 'Set Motor Position (radians)'
             x = raw_input()
             if len(x):
-                temp = map(float,x.split(','))
-            manParams.leadIn = temp[0]
-            manParams.leadOut = temp[1]
-            manParams.strideFreq = temp[2]
-        elif keypress == 'n':
-            print 'Manuever Enabled'
-            manParams.useFlag = True
-            print 'Enter 6 fractional deltas (0-1) L-R : ',
-            x = raw_input()
+                temp = map(int,x.split(','))
+            pos = []
+            pos.append(temp[0] * 65536)
+            pos.append(1)
+            xb_send(0, command.SET_MOTOR_POS, pack('lh', *pos))
+            print pos
+        elif keypress == 'g':
+            print 'Channel, motor gains [Kp Ki Kd Kanti-wind ff]=', params.motorgains[5:11]  
+            x = None
+            while not x:
+                try:
+                    print 'Enter motor gains ,<csv> [Kp, Ki, Kd, Kanti-wind, ff]',
+                    x = raw_input()
+                except ValueError:
+                    print 'Invalid Number'
             if len(x):
-                manParams.deltas = map(float,x.split(','))
-            print 'Deltas: ', manParams.deltas
+                motor = map(int,x.split(','))
+                if len(motor) == 6:
+                    if motor[0]:
+                        params.motorgains[5:11] = motor[1:]
+                        shared.motor_gains_set = False
+                        setMotorGains(params.motorgains)
+                    else:
+                        params.motorgains[0:5] = motor[1:]
+                        shared.motor_gains_set = False
+                        setMotorGains(params.motorgains)
+                    print 'Gains set:', motor
+                else:
+                    print 'not enough values'            
         elif keypress == 'p':
-            print 'Manuever Disabled'
-            manParams.useFlag = False
-            print 'Right Leg Frequency, Left Leg Frequency, Phase (degrees): ',
+            print 'Set Body Angle (degrees)'
             x = raw_input()
             if len(x):
-                temp = map(float,x.split(','))
-            params.rightFreq = temp[0]
-            params.leftFreq = temp[1]
-            params.phase = temp[2] * 65536.0/360
-            setVelProfile(params, manParams, 0)
+                temp = map(int,x.split(','))
+                temp[0] = temp[0]*16384
+                xb_send(0, command.RESET_BODY_ANG, "0")
+                xb_send(0, command.PID_START_MOTORS, "0")
+                xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
+                time.sleep(params.duration/1000.0)
+                xb_send(0, command.PID_STOP_MOTORS, "0")
+        elif keypress == 's':
+            print 'Set single jumps params (duration ms, leg extension 10rad): ', [sj_params.duration, sj_params.leg_extension]
+            x = raw_input()
+            if len(x):
+                temp = map(int,x.split(','))
+                sj_params.duration = temp[0]
+                sj_params.leg_extension = temp[1]
+                temp = [1] + temp
+                xb_send(0, command.SET_EXP_PARAMS, pack('Bhh', *temp))
+        elif keypress == 'w':
+            print 'Set wall jumps params (launch angle, launch threshold, landing angle, leg extension, leg retraction): ', [sj_params.duration, sj_params.leg_extension]
+            x = raw_input()
+            if len(x):
+                temp = map(int,x.split(','))
+                wj_params.launch_angle      = temp[0]
+                wj_params.launch_threshold  = temp[1]
+                wj_params.landing_angle     = temp[2]
+                wj_params.leg_extension     = temp[3]
+                wj_params.leg_retraction    = temp[4]
+                temp = [0] + temp
+                xb_send(0, command.SET_EXP_PARAMS, pack('B5l', *temp))
+        elif keypress == 'q': 
+            print "Exit."
+            shared.xb.halt()
+            shared.ser.close()
+            sys.exit(0)
 
 def repeatMenu(params):
     print "SPACE: Repeat with same settings  |q:quit"
@@ -375,20 +449,10 @@ def writeFileHeader(dataFileName, params, manParams):
     date = date + str(today.tm_hour) +':' + str(today.tm_min)+':'+str(today.tm_sec)
     fileout.write('"Data file recorded ' + date + '"\n')
 
-    if manParams.useFlag == True:
-        fileout.write('"%  Stride Frequency         = ' +repr(manParams.strideFreq) + '"\n')
-        fileout.write('"%  Lead In /Lead Out         = ' +repr(manParams.leadIn) +','+repr(manParams.leadOut) + '"\n')
-        fileout.write('"%  Deltas (Fractional)         = ' +repr(manParams.deltas) + '"\n')
-    else:    
-        fileout.write('"%  Right Stride Frequency         = ' +repr(params.rightFreq) + '"\n')
-        fileout.write('"%  Left Stride Frequency         = ' +repr(params.leftFreq) + '"\n')
-        fileout.write('"%  Phase (Fractional)         = ' +repr(params.phase) + '"\n')
-
     fileout.write('"%  Experiment.py "\n')
     fileout.write('"%  Motor Gains    = ' + repr(params.motorgains) + '\n')
     fileout.write('"% Columns: "\n')
-    # order for wiring on RF Turner
-    fileout.write('"% time | Right Leg Pos | Left Leg Pos | Commanded Right Leg Pos | Commanded Left Leg Pos | DCR | DCL | GyroX | GryoY | GryoZ | AX | AY | AZ | RBEMF | LBEMF | VBatt "\n')
+    fileout.write('time (us), Tail Positon, Femur Position, Motor Position, Est. Pitch, Est. Roll, Est. Yaw, Commanded Pitch, Commanded Motor Angle, Tail DC, Rear Prop DC, Front Prop DC, BLDC DC, GyroX, GryoY, GryoZ, AX ,AY ,AZ\n')
     fileout.close()
 
 def eraseFlashMem(numSamples):

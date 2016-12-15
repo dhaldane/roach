@@ -22,7 +22,7 @@ pktFormat = { \
     command.SET_STEERING_GAINS:     '6h', \
     command.SOFTWARE_RESET:         '', \
     command.ERASE_SECTORS:          'L', \
-    command.FLASH_READBACK:         '=LL' +'4l'+'11h', \
+    command.FLASH_READBACK:         '=LL' +'7l'+'H'+'9h', \
     command.SLEEP:                  'b', \
     command.ECHO:                   'c' ,\
     command.SET_VEL_PROFILE:        '8h' ,\
@@ -111,6 +111,7 @@ def xbee_received(packet):
             #if datum[0] == 0:
             #    shared.flash_erased = True
             shared.flash_erased = datum[0]
+            print 'Erase done'
         # SLEEP
         elif type == command.SLEEP:
             datum = unpack(pattern, data)

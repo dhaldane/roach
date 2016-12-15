@@ -22,8 +22,11 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [1800,200,100,0,0, 1800,200,100,0,0]
-    duration = 500
+    motorgains = [600,0,20,0,0, 100,0,0,0,0]
+    # motorgains = [0,0,0,0,0, 100,0,0,0,0]
+    thrustGains = [0,200]
+    xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
+    duration = 2000
     rightFreq = 0
     leftFreq = 0
     phase = 0
@@ -33,19 +36,16 @@ def main():
     params = hallParams(motorgains, duration, rightFreq, leftFreq, phase, telemetry, repeat)
     setMotorGains(motorgains)
 
-    leadIn = 10
-    leadOut = 10
-    strideFreq = 5
-    phase = 0x8000      # Alternating tripod
-    useFlag = 0
-    deltas = [.25, 0.25, 0.25, 0.125, 0.125, 0.5]
+    sj_params = sjParams(300, 800)
+    # wj_params = wjParams(-551287, -50000, 1000000, 4941297, 411774)
+    wj_params = wjParams(-551287, -40000, 80000, 5353068, 411774)
+    wjParams.set(wj_params)
 
-    manParams = manueverParams(leadIn, leadOut, strideFreq, phase, useFlag, deltas)
 
     while True:
 
         if not(params.repeat):
-            settingsMenu(params, manParams)   
+            settingsMenu(params, sj_params, wj_params)   
 
         if params.telemetry:
             # Construct filename
@@ -58,26 +58,24 @@ def main():
             shared.dataFileName = root + '_imudata.txt'
             print "Data file:  ", shared.dataFileName
             print os.curdir
-            if manParams.useFlag == True:
-                duration = 1.0/manParams.strideFreq * (manParams.leadIn + 1 + manParams.leadOut)
-                numSamples = int(ceil(1000 * duration))
-            else:
-                numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
-            eraseFlashMem(numSamples)
 
-        # Trigger telemetry save, which starts as soon as it is received
-        if params.telemetry:
-        # Pause and wait to start run, including leadin time
+            numSamples = int(ceil(1000 * (params.duration + shared.leadinTime + shared.leadoutTime) / 1000.0))
+            eraseFlashMem(numSamples)
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
-        #Start robot
-        if manParams.useFlag == True:
-            runManeuver(params, manParams)
-        else:
-            xb_send(0, command.SET_PHASE, pack('l', params.phase))
-            time.sleep(0.01)
-            xb_send(0, command.START_TIMED_RUN, pack('h',params.duration))
-            time.sleep(params.duration / 1000.0)
+
+        #Start robot 0: wall jump, 1: single jump
+        exp = [0] 
+        xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
+        time.sleep(params.duration / 1000.0)
+
+
+        # temp = [0]
+        # xb_send(0, command.RESET_BODY_ANG, "0")
+        # xb_send(0, command.PID_START_MOTORS, "0")
+        # xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
+        # time.sleep(params.duration/1000.0)
+        # xb_send(0, command.PID_STOP_MOTORS, "0")
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

@@ -9,7 +9,7 @@
 #define DEFAULT_FF  0
 
 #define GAIN_SCALER         100
-#define NUM_PIDS	2
+#define NUM_PIDS	4
 #define NUM_VELS	4 // 8 velocity setpoints per cycle
 #define NUM_BUFF 	2 // Number of strides buffered in to get setpoint
 
@@ -49,7 +49,7 @@ typedef struct
  	char timeFlag;
 	unsigned long run_time;
 	unsigned long start_time;
-	int inputOffset;  // BEMF setpoint offset
+	int extraVel; // Hijack this for tail velocity storage. Old line: int inputOffset;  // BEMF setpoint offset
 	int feedforward;
     int Kp, Ki, Kd;
 	int Kaw;  // anti-windup gain
@@ -71,7 +71,7 @@ typedef struct
 } pidVelLUT;
 
 //Functions
-void UpdatePID(pidPos *pid);
+void UpdatePID(pidPos *pid, int num);
 void pidSetup();
 void initPIDVelProfile();
 void setPIDVelProfile(int pid_num, int *interval, int *delta, int *vel, int onceFlag);

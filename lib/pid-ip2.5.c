@@ -28,6 +28,9 @@
 #include <stdlib.h> // for malloc
 #include "init.h"  // for Timer1
 
+#include "as5047.h"
+#include "tail_ctrl.h"
+
 
 #define MC_CHANNEL_PWM1     1
 #define MC_CHANNEL_PWM2     2
@@ -88,7 +91,7 @@ void pidSetup()
 	
 	EnableIntT1; // turn on pid interrupts
 
-	calibBatteryOffset(100); //???This is broken for 2.5
+	// calibBatteryOffset(100); //???This is broken for 2.5
 }
 
 
@@ -159,7 +162,7 @@ void initPIDObjPos(pidPos *pid, int Kp, int Ki, int Kd, int Kaw, int ff)
     pid->Kd = Kd;
     pid->Kaw = Kaw; 
 	pid->feedforward = 0;
-  pid->output = 0;
+    pid->output = 0;
     pid->onoff = 0;
 	pid->p_error = 0;
 	pid->v_error = 0;
@@ -201,12 +204,12 @@ unsigned long temp;
 
 void pidStartTimedTrial(unsigned int run_time){
     unsigned long temp;
-
+    int i;
     temp = t1_ticks;  // need atomic read due to interrupt  
-    pidObjs[0].run_time = run_time;
-    pidObjs[1].run_time = run_time;
-    pidObjs[0].start_time = temp;
-    pidObjs[1].start_time = temp;
+    for(i=0;i<NUM_PIDS;i++){
+        pidObjs[i].run_time = run_time;
+        pidObjs[i].start_time = temp;       
+    }
     if ((temp + (unsigned long) run_time) > lastMoveTime)
     { lastMoveTime = temp + (unsigned long) run_time; }  // set run time to max requested time
 }
@@ -268,12 +271,12 @@ void calibBatteryOffset(int spindown_ms){
 	//Left
 	temp = offsetAccumulatorL;
 	temp = temp/(long)offsetAccumulatorCounter;
-	pidObjs[0].inputOffset = (int) temp;
+	// pidObjs[0].inputOffset = (int) temp;
 
 	//Right
 	temp = offsetAccumulatorR;
 	temp = temp/(long)offsetAccumulatorCounter;
-	pidObjs[1].inputOffset = (int) temp;
+	// pidObjs[1].inputOffset = (int) temp;
 
 	LED_RED = 0;
 // restore PID values
@@ -313,8 +316,7 @@ extern volatile MacPacket uart_tx_packet;
 extern volatile unsigned char uart_tx_flag;
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
-    int j;
-    LED_3 = 1;
+    int j,i;
     interrupt_count++;
 
     //Telemetry save, at 1Khz
@@ -344,8 +346,9 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                         pidGetSetpoint(j);
                     }
                     if(t1_ticks > lastMoveTime){ // turn off if done running all legs
-                        pidObjs[0].onoff = 0;
-                        pidObjs[1].onoff = 0;
+                        for(i=0;i<NUM_PIDS;i++){
+                        pidObjs[i].onoff = 0;
+                    }
                     } 
                 } 
                 else {                 
@@ -353,31 +356,15 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
                 }
             }
         }
-        if (pidObjs[0].mode == 0)
-        {
-        pidSetControl();
+        if (pidObjs[0].mode == 0){
+            pidSetControl();
         } else if (pidObjs[0].mode == 1)
         {
             tiHSetDC(1, pidObjs[0].pwmDes);
             tiHSetDC(2, pidObjs[1].pwmDes);
         }
-
-        if(pidObjs[0].onoff) {
-            //telemGetPID();
-//            telemSaveNow();
-            //TODO: Telemetry save should not be tied to the on/off state of the PID controller. Removed for now. needs to be checked. (ronf, pullin, dhaldane)
-
-            // uart_tx_packet = ppoolRequestFullPacket(sizeof(telemStruct_t));
-            // if(uart_tx_packet != NULL) {
-            //     //time|Left pstate|Right pstate|Commanded Left pstate| Commanded Right pstate|DCR|DCL|RBEMF|LBEMF|Gyrox|Gyroy|Gyroz|Ax|Ay|Az
-            //     //bytes: 4,4,4,4,4,2,2,2,2,2,2,2,2,2,2
-            //     paySetType(uart_tx_packet->payload, CMD_PID_TELEMETRY);
-            //     paySetStatus(uart_tx_packet->payload, 0);
-            //     paySetData(uart_tx_packet->payload, sizeof(telemStruct_t), (unsigned char *) &telemPIDdata);
-            //     uart_tx_flag = 1;
-        }
     }
-    LED_3 = 0;
+    //LED_3 = 0;
     _T1IF = 0;
 }
 
@@ -427,101 +414,46 @@ void checkSwapBuff(int j){
 #define VEL_BEMF 0
 
 /* update state variables including motor position and velocity */
+extern long body_angle[3];
+extern EncObj motPos;
+long oldTailPos;
 
 void pidGetState()
 {   int i;
-	long p_state; 
-	unsigned long time_start, time_end; 
-//	calib_flag = 0;  //BEMF disable
-// get diff amp offset with motor off at startup time
-	if(calib_flag)
-	{ 	
-		offsetAccumulatorL += adcGetMotorA();  
-		offsetAccumulatorR += adcGetMotorB();   
-		offsetAccumulatorCounter++; 	}
- 
-// choose velocity estimate  
-#if VEL_BEMF == 0    // use first difference on position for velocity estimate
-	long oldpos[NUM_PIDS], velocity;
-	for(i=0; i<NUM_PIDS; i++)
-	{ oldpos[i] = pidObjs[i].p_state; }
-#endif
-	
-	time_start =  sclockGetTime();
-    bemf[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
-    bemf[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
-// only works to +-32K revs- might reset after certain number of steps? Should wrap around properly
-	for(i =0; i<NUM_PIDS; i++)
-	{     p_state = (long)(encPos[i].pos << 2);		// pos 14 bits 0x0 -> 0x3fff
-	      p_state = p_state + (encPos[i].oticks << 16);
-		p_state = p_state - (long)(encPos[i].offset <<2); 	// subtract offset to get zero position
-		if (i==0)
-		{
-			pidObjs[i].p_state = p_state; //fix for encoder alignment
-		}
-		else
-		{
-			pidObjs[i].p_state = -p_state;
-		}
-		
-	}
+    long p_state, tail_pos;
+    long oldpos[NUM_PIDS], velocity;
+    
+    for(i=0; i<NUM_PIDS; i++)
+    { oldpos[i] = pidObjs[i].p_state; pidObjs[i].extraVel = 0;}
+    
+    p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
+    p_state = p_state + (motPos.oticks << 16);
+    p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
+    pidObjs[0].p_state = body_angle[2];
+    pidObjs[2].p_state = body_angle[1];
+    pidObjs[3].p_state = body_angle[0];
 
-	time_end = sclockGetTime() - time_start;
+    tail_pos = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
 
+    velocity = (tail_pos - oldTailPos) / 64;  // Encoder ticks per ms
+    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
+    if(velocity < -0x7fff) velocity = -0x7fff;  
+    pidObjs[0].extraVel = (int) velocity;
+    oldTailPos = tail_pos;
 
-#if VEL_BEMF == 0    // use first difference on position for velocity estimate
-	for(i=0; i<NUM_PIDS; i++)
-	{	velocity = pidObjs[i].p_state - oldpos[i];  // Encoder ticks per ms
-	    if (velocity > 0x7fff) velocity = 0x7fff; // saturate to int
-		if(velocity < -0x7fff) velocity = -0x7fff;	
-		pidObjs[i].v_state = (int) velocity;
-	}
-#endif
-
- // choose velocity estimate  
-
-#if VEL_BEMF == 1
-int measurements[NUM_PIDS];
-// Battery: AN0, MotorA AN8, MotorB AN9, MotorC AN10, MotorD AN11
-	measurements[0] = pidObjs[0].inputOffset - adcGetMotorA(); // watch sign for A/D? unsigned int -> signed?
-     	measurements[1] = pidObjs[1].inputOffset - adcGetMotorB(); // MotorB
-
-	
-//Get motor speed reading on every interrupt - A/D conversion triggered by PWM timer to read Vm when transistor is off
-// when motor is loaded, sometimes see motor short so that  bemf=offset voltage
-// get zero sometimes - open circuit brush? Hence try median filter
-	for(i = 0; i<2; i++) 	// median filter
-	{	if(measurements[i] > measLast1[i])	
-		{	if(measLast1[i] > measLast2[i]) {bemf[i] = measLast1[i];}  // middle value is median
-			else // middle is smallest
-	     		{ if(measurements[i] > measLast2[i]) {bemf[i] = measLast2[i];} // 3rd value is median
-	        	   else{ bemf[i] = measurements[i];}  // first value is median
-            	}
-      	}           
-		else  // first is not biggest
-		{	if(measLast1[i] < measLast2[i]) {bemf[i] = measLast1[i];}  // middle value is median
-			else  // middle is biggest
-	     		{    if(measurements[i] < measLast2[i]) {bemf[i] = measLast2[i];} // 3rd value is median
-		     		else
-				{ bemf[i] = measurements[i];  // first value is median			 
-				}
-			}
-		}
-	} // end for
-// store old values
-	measLast2[0] = measLast1[0];  measLast1[0] = measurements[0];
-	measLast2[1] = measLast1[1];  measLast1[1] = measurements[1];
-   	pidObjs[0].v_state = bemf[0]; 
-	pidObjs[1].v_state = bemf[1];  //  might also estimate from deriv of pos data
-    //if((measurements[0] > 0) || (measurements[1] > 0)) {
-    if((measurements[0] > 0)) { LED_BLUE = 1;}
-    else{ LED_BLUE = 0;}
-#endif
+    int gdata[3];   
+    mpuGetGyro(gdata);
+    pidObjs[0].v_state = gdata[0]; // Pitch angle
+    pidObjs[2].v_state = gdata[1]; // Roll angle
+    pidObjs[3].v_state = gdata[2]; // Yaw angle
 }
 
 
+long min_pos = -3000;
+long max_pos = 1114112;
+
 void pidSetControl()
-{ int j;
+{ int i,j;
 // 0 = right side
     for(j=0; j < NUM_PIDS; j++)
    {  //pidobjs[0] : right side
@@ -530,48 +462,76 @@ void pidSetControl()
         	pidObjs[j].p_error = pidObjs[j].p_input + pidObjs[j].interpolate  - pidObjs[j].p_state;
             pidObjs[j].v_error = pidObjs[j].v_input - pidObjs[j].v_state;  // v_input should be revs/sec
             //Update values
-            UpdatePID(&(pidObjs[j]));
+            UpdatePID(&(pidObjs[j]),j);
        } // end of for(j)
-
-		if(pidObjs[0].onoff && pidObjs[1].onoff)  // both motors on to run
-		{
- 		   tiHSetDC(1, pidObjs[0].output); 
-		   tiHSetDC(2, pidObjs[1].output); 
-		} 
-		else // turn off motors if PID loop is off
-		{ tiHSetDC(1,0); tiHSetDC(2,0); }	
+   for(i=0;i<NUM_PIDS;i++){
+        if(pidObjs[i].onoff) {tiHSetDC(i+1, pidObjs[i].output); }
+        else {tiHSetDC(i+1,0);} // turn off motor if PID loop is off
+    }
 }
 
-
-void UpdatePID(pidPos *pid)
+void UpdatePID(pidPos *pid, int num)
 {
-    pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
-    pid->i = (long)pid->Ki  * pid->i_error >>12 ;
-    pid->d=(long)pid->Kd *  (long) pid->v_error;
-    // better check scale factors
+    if(num < 3){
+        pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
+        pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
+        pid->d=  (long)pid->Kd *  (long) pid->v_error;
+        // better check scale factors
 
-    pid->preSat = pid->feedforward + pid->p +
-		 ((pid->i ) >> 4) +  // divide by 16
-		(pid->d >> 4); // divide by 16
-	pid->output = pid->preSat;
+        pid->preSat = (pid->feedforward * pid->extraVel) + pid->p +
+    		 ((pid->i ) >> 4) +  // divide by 16
+    		  (pid->d >> 4); // divide by 16
+    	pid->output = pid->preSat;
  
-/* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
-    scale p_error by 16, so get 12 bit angle value*/
-	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+    /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
+        scale p_error by 16, so get 12 bit angle value*/
+    	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+    // Mixing for Thruster control
+    if (num == 2)
+    {
+        pidPos *yaw = &(pidObjs[3]);
+        yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
+        // yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
+        yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
+        // better check scale factors
+
+        yaw->preSat = yaw->p +
+             // ((yaw->i ) >> 4) +  // divide by 16
+              (yaw->d >> 4); // divide by 16
+
+        long temp_roll, temp_yaw;
+
+        temp_roll = (-2*pid->preSat + yaw->preSat)/2;
+        temp_yaw = (-2*pid->preSat - yaw->preSat)/2;
+
+        // TODO: Saturate correctly for control effort in yaw/roll
+        if (temp_yaw < -MAXTHROT){yaw->output = -MAXTHROT;} 
+        else if (temp_yaw > MAXTHROT){yaw->output = MAXTHROT;}
+        else {yaw->output=temp_yaw;}
+        if (temp_roll < -MAXTHROT){pid->output = -MAXTHROT;} 
+        else if (temp_roll > MAXTHROT){pid->output = MAXTHROT;}
+        else {pid->output=temp_roll;}
+
+    }
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
-	if (pid->preSat > MAXTHROT) 
-	{ 	      pid->output = MAXTHROT; 
-			pid->i_error = (long) pid->i_error + 
-				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
-				/ ((long)GAIN_SCALER);		
-	}      
-	if (pid->preSat < -MAXTHROT)
-      { 	      pid->output = -MAXTHROT; 
-			pid->i_error = (long) pid->i_error + 
-				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
-				/ ((long)GAIN_SCALER);		
-	}      
+    if(num==0){
+        pid->preSat = -pid->preSat;
+        pid->output = -pid->output;
+    	if (pid->preSat > MAXTHROT) 
+    	{ 	      pid->output = MAXTHROT; 
+    			pid->i_error = (long) pid->i_error + 
+    				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
+    				/ ((long)GAIN_SCALER);		
+    	}      
+    	if (pid->preSat < -MAXTHROT)
+          { 	      pid->output = -MAXTHROT; 
+    			pid->i_error = (long) pid->i_error + 
+    				(long)(pid->Kaw) * ((long)(MAXTHROT) - (long)(pid->preSat)) 
+    				/ ((long)GAIN_SCALER);		
+    	   }
+        } 
+    }   
 }
 
 
