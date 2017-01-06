@@ -20,14 +20,15 @@ static volatile unsigned char interrupt_count = 0;
 static int interval[NUM_VELS];
 long set_pt = 0;
 
-long body_angle[3];
+long vicon_angle[3]; // Last Vicon-measured body angle
+long body_angle[3]; // Current body angle estimate
 
 extern pidPos pidObjs[NUM_PIDS];
 
 char pitchControlFlag;
 long pitchSetpoint;
-long rollSetpoint; // JY edits
-long yawSetpoint; // JY edits
+long rollSetpoint;
+long yawSetpoint;
 
 
 void tailCtrlSetup(){
@@ -67,12 +68,20 @@ void setPitchSetpoint(long setpoint){
     pitchSetpoint = setpoint;
 }
 
-void setRollSetpoint(long setpoint){ // JY edits
+void setRollSetpoint(long setpoint){
     rollSetpoint = setpoint;
 }
 
-void setYawSetpoint(long setpoint){ // JY edits
+void setYawSetpoint(long setpoint){
     yawSetpoint = setpoint;
+}
+
+void updateViconAngle(long* new_vicon_angle){
+    int i;
+    for (i=0; i<3; i++){
+        vicon_angle[i] = new_vicon_angle[i];
+        body_angle[i] = new_vicon_angle[i]; // TODO: is this the right approach?
+    }
 }
 
 void resetBodyAngle(){
@@ -113,10 +122,10 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
             pidObjs[0].onoff = 0;
         } else {
             //LED_2 = 1;
-            // Control pitch
+            // Control pitch, roll, and yaw
             pidObjs[0].p_input = pitchSetpoint;
-            pidObjs[2].p_input = 0; // roll or yaw
-            pidObjs[3].p_input = 0; // roll or yaw
+            pidObjs[2].p_input = rollSetpoint;
+            pidObjs[3].p_input = yawSetpoint;
         }
     }
 

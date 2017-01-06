@@ -28,6 +28,8 @@
 #define CMD_SET_MOTOR_POS           0x99
 #define CMD_START_EXP               0x9A
 #define CMD_SET_EXP_PARAMS          0x9B
+
+#define CMD_INTEGRATED_VICON        0xA1
 // Redefine
 
 void cmdSetup(void);

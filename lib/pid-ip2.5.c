@@ -489,6 +489,7 @@ void UpdatePID(pidPos *pid, int num)
     // Mixing for Thruster control
     if (num == 2)
     {
+        // pidObjs[2] is roll and pidObjs[3] is yaw
         pidPos *yaw = &(pidObjs[3]);
         yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
         // yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;

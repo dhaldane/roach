@@ -52,6 +52,7 @@ static unsigned char cmdresetBodyAngle(unsigned char type, unsigned char status,
 static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetExperimentParams(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -98,6 +99,7 @@ void cmdSetup(void) {
     cmd_func[CMD_SET_MOTOR_POS] = &cmdSetMotorPos;
     cmd_func[CMD_START_EXP] = &cmdStartExperiment;
     cmd_func[CMD_SET_EXP_PARAMS] = &cmdSetExperimentParams;
+    cmd_func[CMD_INTEGRATED_VICON] = &cmdIntegratedVicon;
 
 }
 
@@ -200,6 +202,31 @@ unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsi
     }
     setPitchControlFlag(1);
     setPitchSetpoint(pos);
+    return 1;
+}
+
+unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    // Receive Vicon-measured attitude (3), desired attitude (3), leg length (1), and push-off command (1)
+    long new_vicon_angle[3] = {0,0,0};
+    long new_setpoints[3] = {0,0,0};
+    int i, j;
+
+    for (i=0; i<3; i++){
+        for (j=0; j<4; j++){
+            new_vicon_angle[i] += ((long)frame[3*i+j] << 8*j);
+        }
+    }
+    for (i=0; i<3; i++){
+        for (j=0; j<4; j++){
+            new_setpoints[i] += ((long)frame[3*i+j+12] << 8*j);
+        }
+    }
+
+    updateViconAngle(new_vicon_angle);
+    setPitchSetpoint(new_setpoints[0]);
+    setRollSetpoint(new_setpoints[1]);
+    setYawSetpoint(new_setpoints[2]);
+
     return 1;
 }
 
