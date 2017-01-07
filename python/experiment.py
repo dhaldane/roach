@@ -24,8 +24,9 @@ def main():
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    thrustGains = [0,200]
-    xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('2h', *thrustGains))
+    thrustGains = [100,0,0,0,0,0]
+    xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('6h', *thrustGains))
+
     duration = 2000
     rightFreq = 0
     leftFreq = 0
@@ -77,6 +78,9 @@ def main():
         # xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
         # time.sleep(params.duration/1000.0)
         # xb_send(0, command.PID_STOP_MOTORS, "0")
+
+        viconTest = [0,0,0,0,10000,0,0,0]
+        xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

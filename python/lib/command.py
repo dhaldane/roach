@@ -79,5 +79,6 @@ SET_MOTOR_POS           =   0x99
 START_EXPERIMENT        =   0x9A
 SET_EXP_PARAMS          =   0x9B
 
+INTEGRATED_VICON        =   0xA1
 
 # CMD values of 0xF0(240) - 0xFF(255) are reserved for future use

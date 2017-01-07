@@ -472,7 +472,7 @@ void pidSetControl()
 
 void UpdatePID(pidPos *pid, int num)
 {
-    if(num < 3){
+    if(num < 2){
         pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
         pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
         pid->d=  (long)pid->Kd *  (long) pid->v_error;
@@ -487,33 +487,7 @@ void UpdatePID(pidPos *pid, int num)
         scale p_error by 16, so get 12 bit angle value*/
     	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
     // Mixing for Thruster control
-    if (num == 2)
-    {
-        // pidObjs[2] is roll and pidObjs[3] is yaw
-        pidPos *yaw = &(pidObjs[3]);
-        yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
-        // yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
-        yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
-        // better check scale factors
 
-        yaw->preSat = yaw->p +
-             // ((yaw->i ) >> 4) +  // divide by 16
-              (yaw->d >> 4); // divide by 16
-
-        long temp_roll, temp_yaw;
-
-        temp_roll = (-2*pid->preSat + yaw->preSat)/2;
-        temp_yaw = (-2*pid->preSat - yaw->preSat)/2;
-
-        // TODO: Saturate correctly for control effort in yaw/roll
-        if (temp_yaw < -MAXTHROT){yaw->output = -MAXTHROT;} 
-        else if (temp_yaw > MAXTHROT){yaw->output = MAXTHROT;}
-        else {yaw->output=temp_yaw;}
-        if (temp_roll < -MAXTHROT){pid->output = -MAXTHROT;} 
-        else if (temp_roll > MAXTHROT){pid->output = MAXTHROT;}
-        else {pid->output=temp_roll;}
-
-    }
 // saturate output - assume only worry about >0 for now
 // apply anti-windup to integrator  
     if(num==0){
@@ -532,7 +506,52 @@ void UpdatePID(pidPos *pid, int num)
     				/ ((long)GAIN_SCALER);		
     	   }
         } 
-    }   
+    }
+
+    // Mixed roll and yaw
+    if (num == 2){
+        pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
+        pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
+        pid->d=  (long)pid->Kd *  (long) pid->v_error;
+        // better check scale factors
+
+        pid->preSat = (pid->feedforward * pid->extraVel) + pid->p +
+    		 ((pid->i ) >> 4) +  // divide by 16
+    		  (pid->d >> 4); // divide by 16
+    	pid->output = pid->preSat;
+
+    /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
+        scale p_error by 16, so get 12 bit angle value*/
+    	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+     	//pid-> i_error = (long)pid-> i_error + ((long)pid->v_error); // integrate velocity error
+
+
+        // pidObjs[2] is roll and pidObjs[3] is yaw
+        pidPos *yaw = &(pidObjs[3]);
+        yaw->p = ((long)yaw->Kp * yaw->p_error) >> 12 ;  // scale so doesn't over flow
+        yaw->i = (long)yaw->Ki  * yaw->i_error  >> 12 ;
+        yaw->d=  (long)yaw->Kd *  (long) yaw->v_error;
+        // better check scale factors
+
+        yaw->preSat = (yaw->feedforward * yaw->extraVel) + yaw->p +
+             ((yaw->i ) >> 4) +  // divide by 16
+              (yaw->d >> 4); // divide by 16
+        yaw->output = yaw->preSat;
+
+        long temp_roll, temp_yaw;
+
+        temp_roll = (-2*pid->preSat + yaw->preSat)/2;
+        temp_yaw = (-2*pid->preSat - yaw->preSat)/2;
+
+        // TODO: Saturate correctly for control effort in yaw/roll
+        if (temp_yaw < -MAXTHROT){yaw->output = -MAXTHROT;} 
+        else if (temp_yaw > MAXTHROT){yaw->output = MAXTHROT;}
+        else {yaw->output=temp_yaw;}
+        if (temp_roll < -MAXTHROT){pid->output = -MAXTHROT;} 
+        else if (temp_roll > MAXTHROT){pid->output = MAXTHROT;}
+        else {pid->output=temp_roll;}
+
+    }
 }
 
 

@@ -207,25 +207,24 @@ unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsi
 
 unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     // Receive Vicon-measured attitude (3), desired attitude (3), leg length (1), and push-off command (1)
-    long new_vicon_angle[3] = {0,0,0};
-    long new_setpoints[3] = {0,0,0};
-    int i, j;
-
+    int16_t new_vicon_angle[3];
+    int16_t new_setpoints[3];
+    int i;
     for (i=0; i<3; i++){
-        for (j=0; j<4; j++){
-            new_vicon_angle[i] += ((long)frame[3*i+j] << 8*j);
-        }
+        new_vicon_angle[i] = (int16_t)frame[2*i] + ((int16_t)frame[2*i+1] << 8);
     }
     for (i=0; i<3; i++){
-        for (j=0; j<4; j++){
-            new_setpoints[i] += ((long)frame[3*i+j+12] << 8*j);
-        }
+        new_setpoints[i] = (int16_t)frame[2*i+6] + ((int16_t)frame[2*i+7] << 8);
     }
+    int16_t leg_length = (int16_t)frame[12] + ((int16_t)frame[13] << 8);
+    int16_t pushoff = (int16_t)frame[14] + ((int16_t)frame[15] << 8);
 
     updateViconAngle(new_vicon_angle);
     setPitchSetpoint(new_setpoints[0]);
     setRollSetpoint(new_setpoints[1]);
     setYawSetpoint(new_setpoints[2]);
+    setLegSetpoint(leg_length);
+    setPushoffCmd(pushoff);
 
     return 1;
 }
@@ -315,9 +314,13 @@ unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, uns
     // EnableIntT1;
     /// HIGHJACKING FUNCTION 8/3/2016 FOR PROP GAINS
     int Kpr = frame[0] + (frame[1] << 8);
-    int Kdr = frame[2] + (frame[3] << 8);
-    pidSetGains(2,Kpr,0,Kdr,0,0);
-    // pidSetGains(3,Kpy,0,Kdy,0,0);
+    int Kir = frame[2] + (frame[3] << 8);
+    int Kdr = frame[4] + (frame[5] << 8);
+    int Kpy = frame[6] + (frame[7] << 8);
+    int Kiy = frame[8] + (frame[9] << 8);
+    int Kdy = frame[10] + (frame[11] << 8);
+    pidSetGains(2,Kpr,Kir,Kdr,0,0);
+    pidSetGains(3,Kpy,Kiy,Kdy,0,0);
     return 1;
  } 
 

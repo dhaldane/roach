@@ -26,9 +26,11 @@ long body_angle[3]; // Current body angle estimate
 extern pidPos pidObjs[NUM_PIDS];
 
 char pitchControlFlag;
-long pitchSetpoint;
-long rollSetpoint;
-long yawSetpoint;
+int16_t pitchSetpoint;
+int16_t rollSetpoint;
+int16_t yawSetpoint;
+int16_t legSetpoint;
+int16_t pushoffCmd;
 
 
 void tailCtrlSetup(){
@@ -57,6 +59,9 @@ void tailCtrlSetup(){
     pidObjs[2].v_input = 0;
     pidObjs[3].v_input = 0;
     pidOn(0);
+
+    pidOn(2); // turn on thrusters (JY edits)
+    pidOn(3);
 }
 
 void setPitchControlFlag(char state){
@@ -74,6 +79,14 @@ void setRollSetpoint(long setpoint){
 
 void setYawSetpoint(long setpoint){
     yawSetpoint = setpoint;
+}
+
+void setLegSetpoint(long length){
+    legSetpoint = length;
+}
+
+void setPushoffCmd(long cmd){
+    pushoffCmd = cmd;
 }
 
 void updateViconAngle(long* new_vicon_angle){
@@ -123,9 +136,9 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         } else {
             //LED_2 = 1;
             // Control pitch, roll, and yaw
-            pidObjs[0].p_input = pitchSetpoint;
-            pidObjs[2].p_input = rollSetpoint;
-            pidObjs[3].p_input = yawSetpoint;
+            pidObjs[0].p_input = (long)pitchSetpoint << 8;
+            pidObjs[2].p_input = (long)rollSetpoint << 8;
+            pidObjs[3].p_input = (long)yawSetpoint << 8;
         }
     }
 
