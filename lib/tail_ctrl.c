@@ -22,6 +22,7 @@ long set_pt = 0;
 
 long vicon_angle[3]; // Last Vicon-measured body angle
 long body_angle[3]; // Current body angle estimate
+long body_velocity[3]; // Current body velocity estimate
 
 extern pidPos pidObjs[NUM_PIDS];
 
@@ -32,6 +33,7 @@ int16_t yawSetpoint;
 int16_t legSetpoint;
 int16_t pushoffCmd;
 
+extern packet_union_t uart_tx_packet_global;
 
 void tailCtrlSetup(){
     int i;
@@ -58,10 +60,8 @@ void tailCtrlSetup(){
     pidObjs[3].p_input = 0;
     pidObjs[2].v_input = 0;
     pidObjs[3].v_input = 0;
-    pidOn(0);
-
-    pidOn(2); // turn on thrusters (JY edits)
-    pidOn(3);
+    
+    //pidOn(0); // commented out JY edits
 }
 
 void setPitchControlFlag(char state){
@@ -120,19 +120,29 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         //      integrate gyros over lag time
 
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        if(ABS(gdata[2] - 51)>80){body_angle[0] += gdata[2] - 51;}
-        if(ABS(gdata[1] + 10)>80){body_angle[1] += gdata[1] + 10;}
-        if(ABS(gdata[0] - 15)>80){body_angle[2] += gdata[0] - 15;}
+        gdata[0] -= -5; // ImageProc board short axis
+        gdata[1] -= 10; // ImageProc board long axis
+        gdata[2] -= -5; // ImageProc board normal
+        body_velocity[0] = (((long)(gdata[2] + gdata[1]))*181)>>8; //yaw
+        body_velocity[1] = (((long)(gdata[1] - gdata[2]))*181)>>8; //roll
+        body_velocity[2] = gdata[0]; //pitch
+
+        body_angle[0] += body_velocity[0]; //yaw
+        body_angle[1] += body_velocity[1]; //roll
+        body_angle[2] += body_velocity[2]; //pitch
 
     }
     if(interrupt_count == 5) 
     {
         interrupt_count = 0;
-        expFlow();
+        //expFlow();
+        multiJumpFlow();
         if(pitchControlFlag == 0){
             //LED_2 = 0;
             // Control/motor off
             pidObjs[0].onoff = 0;
+            pidObjs[2].onoff = 0;
+            pidObjs[3].onoff = 0;
         } else {
             //LED_2 = 1;
             // Control pitch, roll, and yaw

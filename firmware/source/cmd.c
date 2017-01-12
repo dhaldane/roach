@@ -219,7 +219,7 @@ unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsig
     int16_t leg_length = (int16_t)frame[12] + ((int16_t)frame[13] << 8);
     int16_t pushoff = (int16_t)frame[14] + ((int16_t)frame[15] << 8);
 
-    updateViconAngle(new_vicon_angle);
+    updateViconAngle((long*)new_vicon_angle);
     setPitchSetpoint(new_setpoints[0]);
     setRollSetpoint(new_setpoints[1]);
     setYawSetpoint(new_setpoints[2]);

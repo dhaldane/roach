@@ -415,6 +415,7 @@ void checkSwapBuff(int j){
 
 /* update state variables including motor position and velocity */
 extern long body_angle[3];
+extern long body_velocity[3];
 extern EncObj motPos;
 long oldTailPos;
 
@@ -429,9 +430,9 @@ void pidGetState()
     p_state = (long)(motPos.pos << 2);		// pos 14 bits 0x0 -> 0x3fff
     p_state = p_state + (motPos.oticks << 16);
     p_state = p_state - (long)(motPos.offset <<2); 	// subtract offset to get zero position
-    pidObjs[0].p_state = body_angle[2];
-    pidObjs[2].p_state = body_angle[1];
-    pidObjs[3].p_state = body_angle[0];
+    pidObjs[0].p_state = body_angle[2]; //pitch
+    pidObjs[2].p_state = body_angle[1]; //roll
+    pidObjs[3].p_state = body_angle[0]; //yaw
 
     tail_pos = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
 
@@ -441,11 +442,11 @@ void pidGetState()
     pidObjs[0].extraVel = (int) velocity;
     oldTailPos = tail_pos;
 
-    int gdata[3];   
-    mpuGetGyro(gdata);
-    pidObjs[0].v_state = gdata[0]; // Pitch angle
-    pidObjs[2].v_state = gdata[1]; // Roll angle
-    pidObjs[3].v_state = gdata[2]; // Yaw angle
+    //int gdata[3];
+    //mpuGetGyro(gdata);
+    pidObjs[0].v_state = body_velocity[2]; // Pitch angle
+    pidObjs[2].v_state = body_velocity[1]; // Roll angle
+    pidObjs[3].v_state = body_velocity[0]; // Yaw angle
 }
 
 
@@ -486,10 +487,10 @@ void UpdatePID(pidPos *pid, int num)
     /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
         scale p_error by 16, so get 12 bit angle value*/
     	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
-    // Mixing for Thruster control
+    
 
-// saturate output - assume only worry about >0 for now
-// apply anti-windup to integrator  
+    // saturate output - assume only worry about >0 for now
+    // apply anti-windup to integrator  
     if(num==0){
         pid->preSat = -pid->preSat;
         pid->output = -pid->output;
@@ -508,7 +509,7 @@ void UpdatePID(pidPos *pid, int num)
         } 
     }
 
-    // Mixed roll and yaw
+    // Roll and Yaw Mixing for Thruster Control
     if (num == 2){
         pid->p = ((long)pid->Kp * pid->p_error) >> 12 ;  // scale so doesn't over flow
         pid->i = (long)pid->Ki  * pid->i_error  >> 12 ;
@@ -522,8 +523,9 @@ void UpdatePID(pidPos *pid, int num)
 
     /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
         scale p_error by 16, so get 12 bit angle value*/
-    	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
+    	//pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
      	//pid-> i_error = (long)pid-> i_error + ((long)pid->v_error); // integrate velocity error
+        pid-> i_error = (long)pid-> i_error + ((long)pid->output >> 2); // integrate output
 
 
         // pidObjs[2] is roll and pidObjs[3] is yaw

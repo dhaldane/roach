@@ -27,6 +27,15 @@
 #define EXP_SJ_START        7
 #define EXP_SJ_STOP         8
 
+
+#define MJ_IDLE         0
+#define MJ_START        1
+#define MJ_STOP         2
+#define MJ_AIR          3
+#define MJ_GND          4
+volatile unsigned char mj_state = MJ_IDLE;
+
+
 volatile unsigned char  exp_state = EXP_IDLE;
 volatile unsigned long t_start;
 
@@ -43,6 +52,64 @@ extern pidPos pidObjs[NUM_PIDS];
 extern unsigned long t1_ticks;
 extern long body_angle[3];
 
+extern int16_t legSetpoint;
+extern int16_t pushoffCmd;
+
+
+void multiJumpFlow() {
+    int gdata[3];
+    mpuGetGyro(gdata);
+    switch(mj_state) {
+        case MJ_START:
+            pidObjs[0].timeFlag = 0;
+            setPitchControlFlag(1);
+            pidOn(0);
+            pidOn(2);
+            pidOn(3);
+
+            mj_state = MJ_GND;
+            t_start = 0; // TODO: fix this initialization
+            break;
+
+        case MJ_STOP:
+            pidObjs[0].onoff = 0;
+            pidObjs[2].onoff = 0;
+            pidObjs[3].onoff = 0;
+
+            mj_state = MJ_IDLE;
+            break;
+
+        case MJ_AIR:
+            if(t1_ticks - t_start > 200) {
+                send_command_packet(&uart_tx_packet_global, (long)legSetpoint<<8, 0, 2);
+                t_start = t1_ticks; //TODO: build command rate limit into send_command_packet function
+            }
+
+            // Ground contact transition out of air to ground
+            if(footContact() == 1 || gdata[0] < -6000){
+                mj_state = MJ_GND;
+            }
+            break;
+
+        case MJ_GND:
+            if(t1_ticks - t_start > 100) {
+                send_command_packet(&uart_tx_packet_global, (long)pushoffCmd<<8, 0, 2);
+                t_start = t1_ticks;
+            }
+
+            // Liftoff transition from ground to air
+            if(footTakeoff() == 1 || calibPos(2) > 80000 ) {
+                mj_state = MJ_AIR;
+            }
+            break;
+
+        default:
+            mj_state = MJ_IDLE;
+            break;
+
+    }
+
+}
 
 void expFlow() {
     int gdata[3];
@@ -142,6 +209,10 @@ void expStart(uint8_t mode) {
             exp_state = EXP_SJ_START;
             break;
 
+        case EXP_VICON:
+            mj_state = MJ_START;
+            break;
+
         default:
             exp_state = EXP_IDLE;
             break;
@@ -193,6 +264,18 @@ char footContact(void) {
         return 1;
     } else {
         LED_1 = 0;
+        return 0;
+    }
+}
+
+char footTakeoff(void) {
+    int mot, femur;
+    sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
+    mot = (int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
+    femur = crankFromFemur();
+    if ( mot < femur){
+        return 1;
+    } else {
         return 0;
     }
 }

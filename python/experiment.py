@@ -24,7 +24,7 @@ def main():
     #    ----------LEFT----------        ---------_RIGHT----------
     motorgains = [600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    thrustGains = [100,0,0,0,0,0]
+    thrustGains = [300,100,300,0,0,0]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('6h', *thrustGains))
 
     duration = 2000
@@ -66,8 +66,8 @@ def main():
             raw_input("Press enter to start run ...") 
             startTelemetrySave(numSamples)
 
-        #Start robot 0: wall jump, 1: single jump
-        exp = [0] 
+        #Start robot 0: wall jump, 1: single jump, 2: vicon jumps
+        exp = [2] 
         xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
         time.sleep(params.duration / 1000.0)
 
@@ -79,7 +79,7 @@ def main():
         # time.sleep(params.duration/1000.0)
         # xb_send(0, command.PID_STOP_MOTORS, "0")
 
-        viconTest = [0,0,0,0,10000,0,0,0]
+        viconTest = [0,0,0,0,0,0,2560,0]
         xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
 
         if params.telemetry and query_yes_no("Save Data?"):

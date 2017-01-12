@@ -2,6 +2,7 @@
 
 #define EXP_WALL_JUMP       0
 #define EXP_SINGLE_JUMP     1
+#define EXP_VICON           2
 
 typedef struct {
     int16_t duration;
@@ -18,7 +19,9 @@ typedef struct {
 
 void expStart(uint8_t mode);
 void expFlow();
+void multiJumpFlow();
 char footContact(void);
+char footTakeoff(void);
 void exp_set_params_sj(int16_t duration, int32_t leg_extension);
 void exp_set_params_wj(int32_t launch_angle, int32_t launch_threshold, int32_t landing_angle, int32_t leg_extension, int32_t leg_retraction);
     

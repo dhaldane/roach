@@ -9,4 +9,4 @@ void setLegSetpoint(long length);
 void setPushoffCmd(long cmd);
 void updateViconAngle(long* new_vicon_angle);
 
-extern long body_angle[3];
+//extern long body_angle[3];
