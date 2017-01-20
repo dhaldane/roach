@@ -53,6 +53,7 @@ static unsigned char cmdSetMotorPos(unsigned char type, unsigned char status, un
 static unsigned char cmdStartExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdSetExperimentParams(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 static unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
+static unsigned char cmdStopExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
 
 //Motor and PID functions
 static unsigned char cmdSetThrustOpenLoop(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr);
@@ -100,6 +101,7 @@ void cmdSetup(void) {
     cmd_func[CMD_START_EXP] = &cmdStartExperiment;
     cmd_func[CMD_SET_EXP_PARAMS] = &cmdSetExperimentParams;
     cmd_func[CMD_INTEGRATED_VICON] = &cmdIntegratedVicon;
+    cmd_func[CMD_STOP_EXP] = &cmdStopExperiment;
 
 }
 
@@ -212,20 +214,28 @@ unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsig
     int i;
     for (i=0; i<3; i++){
         new_vicon_angle[i] = (int16_t)frame[2*i] + ((int16_t)frame[2*i+1] << 8);
+        new_vicon_angle[i] = new_vicon_angle[i]<<8;
     }
     for (i=0; i<3; i++){
         new_setpoints[i] = (int16_t)frame[2*i+6] + ((int16_t)frame[2*i+7] << 8);
+        new_setpoints[i] = new_setpoints[i]<<8;
     }
     int16_t leg_length = (int16_t)frame[12] + ((int16_t)frame[13] << 8);
     int16_t pushoff = (int16_t)frame[14] + ((int16_t)frame[15] << 8);
 
     updateViconAngle((long*)new_vicon_angle);
-    setPitchSetpoint(new_setpoints[0]);
-    setRollSetpoint(new_setpoints[1]);
-    setYawSetpoint(new_setpoints[2]);
-    setLegSetpoint(leg_length);
-    setPushoffCmd(pushoff);
+    setPitchSetpoint((long)new_setpoints[0]);
+    setRollSetpoint((long)new_setpoints[1]);
+    setYawSetpoint((long)new_setpoints[2]);
+    setLegSetpoint((long)leg_length);
+    setPushoffCmd((long)pushoff);
 
+    return 1;
+}
+
+unsigned char cmdStopExperiment(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
+    // Stop PID and leg
+    expStop((int)frame[0]);
     return 1;
 }
 

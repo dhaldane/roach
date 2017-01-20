@@ -34,6 +34,7 @@
 #define MJ_AIR          3
 #define MJ_GND          4
 volatile unsigned char mj_state = MJ_IDLE;
+#define UART_PERIOD     10
 
 
 volatile unsigned char  exp_state = EXP_IDLE;
@@ -51,10 +52,17 @@ extern EncObj encPos[NUM_ENC];
 extern pidPos pidObjs[NUM_PIDS];
 extern unsigned long t1_ticks;
 extern long body_angle[3];
+volatile long legSetpoint;
+volatile long pushoffCmd;
 
-extern int16_t legSetpoint;
-extern int16_t pushoffCmd;
 
+void setLegSetpoint(long length){
+    legSetpoint = length << 8;
+}
+
+void setPushoffCmd(long cmd){
+    pushoffCmd = cmd << 8;
+}
 
 void multiJumpFlow() {
     int gdata[3];
@@ -75,13 +83,16 @@ void multiJumpFlow() {
             pidObjs[0].onoff = 0;
             pidObjs[2].onoff = 0;
             pidObjs[3].onoff = 0;
-
-            mj_state = MJ_IDLE;
+            if(t1_ticks - t_start > UART_PERIOD) {
+                send_command_packet(&uart_tx_packet_global, 0, 0, 0);
+                t_start = t1_ticks;
+                mj_state = MJ_IDLE;
+            }
             break;
 
         case MJ_AIR:
-            if(t1_ticks - t_start > 200) {
-                send_command_packet(&uart_tx_packet_global, (long)legSetpoint<<8, 0, 2);
+            if(t1_ticks - t_start > UART_PERIOD) {
+                send_command_packet(&uart_tx_packet_global, legSetpoint, 0, 2);
                 t_start = t1_ticks; //TODO: build command rate limit into send_command_packet function
             }
 
@@ -93,7 +104,7 @@ void multiJumpFlow() {
 
         case MJ_GND:
             if(t1_ticks - t_start > 100) {
-                send_command_packet(&uart_tx_packet_global, (long)pushoffCmd<<8, 0, 2);
+                send_command_packet(&uart_tx_packet_global, pushoffCmd, 0, 2);
                 t_start = t1_ticks;
             }
 
@@ -144,7 +155,7 @@ void expFlow() {
             break;     
         case EXP_WJ_JUMP:
             exp_state = EXP_WJ_JUMP;
-            if((t1_ticks-t_start) > 200){
+            if((t1_ticks-t_start) > UART_PERIOD){
                 setPitchSetpoint(wj_params.landing_angle); // 1000000
                 send_command_packet(&uart_tx_packet_global, wj_params.leg_retraction, 0, 2); // 411774
                 exp_state = EXP_WJ_RETRACT;
@@ -219,6 +230,11 @@ void expStart(uint8_t mode) {
 
     }
 }
+
+void expStop(uint8_t stopSignal) {
+    mj_state = MJ_STOP;
+}
+
 
 void exp_set_params_sj(int16_t duration, int32_t leg_extension) {
     sj_params.duration = duration;

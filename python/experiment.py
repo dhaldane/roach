@@ -22,9 +22,9 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [600,0,20,0,0, 100,0,0,0,0]
+    motorgains = [600,100,200,0,0, 100,0,0,0,0] #[600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    thrustGains = [300,100,300,0,0,0]
+    thrustGains = [300,100,300,30,0,30]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('6h', *thrustGains))
 
     duration = 2000
@@ -68,8 +68,20 @@ def main():
 
         #Start robot 0: wall jump, 1: single jump, 2: vicon jumps
         exp = [2] 
+        stopSignal = [0]
+
+        viconTest = [0,0,0,0,0,0,0,0]
+        xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
+        time.sleep(0.1)
+
         xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
         time.sleep(params.duration / 1000.0)
+
+        time.sleep(10)
+        #viconTest = [0,0,0,0,0,0,256,256]
+        #xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
+        time.sleep(10)
+        xb_send(0, command.STOP_EXPERIMENT, pack('h', *stopSignal))
 
 
         # temp = [0]
@@ -78,9 +90,6 @@ def main():
         # xb_send(0, command.SET_PITCH_SET, pack('l', *temp))
         # time.sleep(params.duration/1000.0)
         # xb_send(0, command.PID_STOP_MOTORS, "0")
-
-        viconTest = [0,0,0,0,0,0,2560,0]
-        xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
 
         if params.telemetry and query_yes_no("Save Data?"):
             flashReadback(numSamples, params, manParams)

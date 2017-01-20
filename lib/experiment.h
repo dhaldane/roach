@@ -18,12 +18,16 @@ typedef struct {
 } experiment_params_wj_t;
 
 void expStart(uint8_t mode);
+void expStop(uint8_t stopSignal);
 void expFlow();
 void multiJumpFlow();
 char footContact(void);
 char footTakeoff(void);
 void exp_set_params_sj(int16_t duration, int32_t leg_extension);
 void exp_set_params_wj(int32_t launch_angle, int32_t launch_threshold, int32_t landing_angle, int32_t leg_extension, int32_t leg_retraction);
+
+void setLegSetpoint(long length);
+void setPushoffCmd(long cmd);
     
 long calibPos(char idx);
 unsigned int crankFromFemur(void);

@@ -29,6 +29,7 @@
 #define CMD_START_EXP               0x9A
 #define CMD_SET_EXP_PARAMS          0x9B
 
+#define CMD_STOP_EXP                0xA0
 #define CMD_INTEGRATED_VICON        0xA1
 // Redefine
 

@@ -30,8 +30,6 @@ char pitchControlFlag;
 int16_t pitchSetpoint;
 int16_t rollSetpoint;
 int16_t yawSetpoint;
-int16_t legSetpoint;
-int16_t pushoffCmd;
 
 extern packet_union_t uart_tx_packet_global;
 
@@ -81,19 +79,13 @@ void setYawSetpoint(long setpoint){
     yawSetpoint = setpoint;
 }
 
-void setLegSetpoint(long length){
-    legSetpoint = length;
-}
-
-void setPushoffCmd(long cmd){
-    pushoffCmd = cmd;
-}
-
 void updateViconAngle(long* new_vicon_angle){
     int i;
     for (i=0; i<3; i++){
         vicon_angle[i] = new_vicon_angle[i];
-        body_angle[i] = new_vicon_angle[i]; // TODO: is this the right approach?
+        body_angle[i] = new_vicon_angle[i] + 
+            body_velocity[i]*2/1000; // integrate over lag
+        //TODO: correct wrap-around, near singularity, etc.
     }
 }
 
