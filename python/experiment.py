@@ -22,9 +22,9 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [600,100,200,0,0, 100,0,0,0,0] #[600,0,20,0,0, 100,0,0,0,0]
+    motorgains = [500,100,200,0,0, 100,0,0,0,0] #[600,0,20,0,0, 100,0,0,0,0]
     # motorgains = [0,0,0,0,0, 100,0,0,0,0]
-    thrustGains = [300,100,300,30,0,30]
+    thrustGains = [300,100,300,30,0,40]
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('6h', *thrustGains))
 
     duration = 2000
@@ -80,7 +80,7 @@ def main():
         time.sleep(10)
         #viconTest = [0,0,0,0,0,0,256,256]
         #xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
-        time.sleep(10)
+        time.sleep(20)
         xb_send(0, command.STOP_EXPERIMENT, pack('h', *stopSignal))
 
 

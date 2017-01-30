@@ -209,26 +209,26 @@ unsigned char cmdSetPitchSetpoint(unsigned char type, unsigned char status, unsi
 
 unsigned char cmdIntegratedVicon(unsigned char type, unsigned char status, unsigned char length, unsigned char *frame, unsigned int src_addr){
     // Receive Vicon-measured attitude (3), desired attitude (3), leg length (1), and push-off command (1)
-    int16_t new_vicon_angle[3];
-    int16_t new_setpoints[3];
+    long new_vicon_angle[3];
+    long new_setpoints[3];
     int i;
     for (i=0; i<3; i++){
         new_vicon_angle[i] = (int16_t)frame[2*i] + ((int16_t)frame[2*i+1] << 8);
-        new_vicon_angle[i] = new_vicon_angle[i]<<8;
+        new_vicon_angle[i] = new_vicon_angle[i] << 8;
     }
     for (i=0; i<3; i++){
         new_setpoints[i] = (int16_t)frame[2*i+6] + ((int16_t)frame[2*i+7] << 8);
-        new_setpoints[i] = new_setpoints[i]<<8;
+        new_setpoints[i] = new_setpoints[i] << 8;
     }
-    int16_t leg_length = (int16_t)frame[12] + ((int16_t)frame[13] << 8);
-    int16_t pushoff = (int16_t)frame[14] + ((int16_t)frame[15] << 8);
+    long leg_length = (int16_t)frame[12] + ((int16_t)frame[13] << 8);
+    long pushoff = (int16_t)frame[14] + ((int16_t)frame[15] << 8);
 
-    updateViconAngle((long*)new_vicon_angle);
-    setPitchSetpoint((long)new_setpoints[0]);
-    setRollSetpoint((long)new_setpoints[1]);
-    setYawSetpoint((long)new_setpoints[2]);
-    setLegSetpoint((long)leg_length);
-    setPushoffCmd((long)pushoff);
+    updateViconAngle(new_vicon_angle);
+    setPitchSetpoint(new_setpoints[2]);
+    setRollSetpoint(new_setpoints[1]);
+    setYawSetpoint(new_setpoints[0]);
+    setLegSetpoint(leg_length);
+    setPushoffCmd(pushoff);
 
     return 1;
 }

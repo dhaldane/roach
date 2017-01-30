@@ -27,9 +27,9 @@ long body_velocity[3]; // Current body velocity estimate
 extern pidPos pidObjs[NUM_PIDS];
 
 char pitchControlFlag;
-int16_t pitchSetpoint;
-int16_t rollSetpoint;
-int16_t yawSetpoint;
+volatile long pitchSetpoint;
+volatile long rollSetpoint;
+volatile long yawSetpoint;
 
 extern packet_union_t uart_tx_packet_global;
 
@@ -83,8 +83,8 @@ void updateViconAngle(long* new_vicon_angle){
     int i;
     for (i=0; i<3; i++){
         vicon_angle[i] = new_vicon_angle[i];
-        body_angle[i] = new_vicon_angle[i] + 
-            body_velocity[i]*2/1000; // integrate over lag
+        body_angle[i] = new_vicon_angle[i]; 
+        //TODO: integrate over lag
         //TODO: correct wrap-around, near singularity, etc.
     }
 }
@@ -138,9 +138,9 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         } else {
             //LED_2 = 1;
             // Control pitch, roll, and yaw
-            pidObjs[0].p_input = (long)pitchSetpoint << 8;
-            pidObjs[2].p_input = (long)rollSetpoint << 8;
-            pidObjs[3].p_input = (long)yawSetpoint << 8;
+            pidObjs[0].p_input = pitchSetpoint;
+            pidObjs[2].p_input = rollSetpoint;
+            pidObjs[3].p_input = yawSetpoint;
         }
     }
 
