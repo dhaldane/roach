@@ -540,7 +540,6 @@ void UpdatePID(pidPos *pid, int num)
              ((yaw->i ) >> 4) +  // divide by 16
               (yaw->d >> 4); // divide by 16
         yaw->output = yaw->preSat;
-        yaw->preSat = yaw->preSat;
 
         long temp_roll, temp_yaw;
 

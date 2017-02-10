@@ -85,7 +85,6 @@ void updateViconAngle(long* new_vicon_angle){
         vicon_angle[i] = new_vicon_angle[i];
         body_angle[i] = new_vicon_angle[i]; 
         //TODO: integrate over lag
-        //TODO: correct wrap-around, near singularity, etc.
     }
 }
 
@@ -106,19 +105,16 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void) {
         int gdata[3];
         mpuGetGyro(gdata);
 
-        // JY edits
-        // update attitude with vicon_attitude
-        // TODO: calibrate Vicon -> python -> Xbee -> ImageProc delay
-        //      integrate gyros over lag time
-
         // body_angle += gdata[2]*GYRO_LSB2_DEG*0.001;
-        gdata[0] -= -5; // ImageProc board short axis
-        gdata[1] -= 10; // ImageProc board long axis
-        gdata[2] -= -5; // ImageProc board normal
+        gdata[0] -= -5;//20; // ImageProc board short axis
+        gdata[1] -= 15;//20; // ImageProc board long axis
+        gdata[2] -= 0;//-20; // ImageProc board normal
         body_velocity[0] = (((long)(gdata[2] + gdata[1]))*181)>>8; //yaw
         body_velocity[1] = (((long)(gdata[1] - gdata[2]))*181)>>8; //roll
-        body_velocity[2] = gdata[0]; //pitch
+        body_velocity[2] = -gdata[0]; //pitch
 
+
+        //TODO: correct wrap-around, near singularity, etc.
         body_angle[0] += body_velocity[0]; //yaw
         body_angle[1] += body_velocity[1]; //roll
         body_angle[2] += body_velocity[2]; //pitch

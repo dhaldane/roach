@@ -64,6 +64,8 @@ void setPushoffCmd(long cmd){
     pushoffCmd = cmd << 8;
 }
 
+
+long transition_time = 0;
 void multiJumpFlow() {
     int gdata[3];
     mpuGetGyro(gdata);
@@ -97,8 +99,9 @@ void multiJumpFlow() {
             }
 
             // Ground contact transition out of air to ground
-            if(footContact() == 1 || gdata[0] < -6000){
+            if (t_start - transition_time > 200 && (footContact() == 1 || gdata[0] < -6000 || gdata[0] > 6000)) {
                 mj_state = MJ_GND;
+                transition_time = t1_ticks;
             }
             break;
 
@@ -109,8 +112,9 @@ void multiJumpFlow() {
             }
 
             // Liftoff transition from ground to air
-            if(footTakeoff() == 1 || calibPos(2) > 80000 ) {
+            if (t_start - transition_time > 200 && (footTakeoff() == 1 || calibPos(2) > 8000)) {
                 mj_state = MJ_AIR;
+                transition_time = t1_ticks;
             }
             break;
 
@@ -289,7 +293,7 @@ char footTakeoff(void) {
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
     mot = (int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
     femur = crankFromFemur();
-    if ( mot < femur){
+    if ( mot > femur){
         return 1;
     } else {
         return 0;
