@@ -486,8 +486,7 @@ void UpdatePID(pidPos *pid, int num)
  
     /* i_error say up to 1 rev error 0x10000, X 256 ms would be 0x1 00 00 00  
         scale p_error by 16, so get 12 bit angle value*/
-    	//pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
-        pid-> i_error = (long)pid->i_error + ((long)pid->output >> 2); // TODO: tail temporary hack
+    	pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
 
 
     // saturate output - assume only worry about >0 for now
@@ -527,6 +526,7 @@ void UpdatePID(pidPos *pid, int num)
     	//pid-> i_error = (long)pid-> i_error + ((long)pid->p_error >> 4); // integrate error
      	//pid-> i_error = (long)pid-> i_error + ((long)pid->v_error); // integrate velocity error
         pid-> i_error = (long)pid-> i_error + ((long)pid->output >> 2); // integrate output
+            // TODO: change integration of output to use extraVel instead of taking over the i_error
 
 
         // pidObjs[2] is roll and pidObjs[3] is yaw

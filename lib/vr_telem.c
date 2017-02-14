@@ -41,7 +41,7 @@ void vrTelemGetData(vrTelemStruct_t* ptr) {
 
     //Motion control
     ptr->posTail = (long)(encPos[0].pos << 2) + (encPos[0].oticks << 16);
-    ptr->posFemur = (long)((encPos[1].pos-encPos[1].offset) << 2)+ (encPos[1].oticks << 16);
+    ptr->posFemur = -(((long)encPos[1].pos - (long)encPos[1].offset) << 2) + (encPos[1].oticks << 16);
     
     ptr->pitch = pidObjs[0].p_state;
     ptr->roll = pidObjs[2].p_state;

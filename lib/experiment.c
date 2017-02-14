@@ -35,6 +35,7 @@
 #define MJ_GND          4
 volatile unsigned char mj_state = MJ_IDLE;
 #define UART_PERIOD     10
+#define FULL_EXTENSION  14000
 
 
 volatile unsigned char  exp_state = EXP_IDLE;
@@ -112,7 +113,7 @@ void multiJumpFlow() {
             }
 
             // Liftoff transition from ground to air
-            if (t_start - transition_time > 200 && (footTakeoff() == 1 || calibPos(2) > 8000)) {
+            if (t_start - transition_time > 200 && (footTakeoff() == 1 || calibPos(2) > FULL_EXTENSION)) {
                 mj_state = MJ_AIR;
                 transition_time = t1_ticks;
             }
@@ -274,11 +275,12 @@ extern uint8_t last_bldc_packet_is_new;
 
 char footContact(void) {
     int eps = 6000;
+    int mot_offset = 0; //800
     unsigned int mot, femur;
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
     mot = (unsigned int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
     femur = crankFromFemur();
-    if ( mot+800>femur && (mot+800 - femur) > eps)
+    if ( mot+mot_offset>femur && (mot+mot_offset - femur) > eps)
     {
         LED_1 = 1;
         return 1;
@@ -293,7 +295,7 @@ char footTakeoff(void) {
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
     mot = (int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
     femur = crankFromFemur();
-    if ( mot > femur){
+    if ( mot < femur){
         return 1;
     } else {
         return 0;
@@ -314,7 +316,7 @@ long calibPos(char idx){
     }
     else if (idx == 2)
     {
-    temp = (long)((encPos[1].pos) << 2)- (long)(encPos[1].offset << 2);       // pos 14 bits 0x0 -> 0x3fff
+    temp = -(((long)encPos[1].pos - (long)encPos[1].offset) << 2);       // pos 14 bits 0x0 -> 0x3fff
     return temp + (encPos[1].oticks << 16);
     }
     else{
