@@ -22,18 +22,15 @@ def main():
     #Motor gains format:
     #  [ Kp , Ki , Kd , Kaw , Kff     ,  Kp , Ki , Kd , Kaw , Kff ]
     #    ----------LEFT----------        ---------_RIGHT----------
-    motorgains = [700,100,300,0,0, 100,0,0,0,0] #[600,0,20,0,0, 100,0,0,0,0]
+    motorgains = [450,0,20,0,100, 0,0,0,0,0] #[600,0,20,0,0, 100,0,0,0,0]
     thrustGains = [300,100,300,30,0,40]
 
     motorgains = [0,0,0,0,0, 0,0,0,0,0] # disable thrusters and tail
     thrustGains = [0,0,0, 0,0,0]
 
-    #motorgains = [100,10,50,0,0,100,0,0,0,0]
-    #thrustGains = [300,100,300,30,0,40]
-
     xb_send(0, command.SET_THRUST_OPEN_LOOP, pack('6h', *thrustGains))
 
-    duration = 2000
+    duration = 5000
     rightFreq = 0
     leftFreq = 0
     phase = 0
@@ -76,23 +73,15 @@ def main():
         exp = [2] 
         stopSignal = [0]
 
-        viconTest = [0,0,0,0,0,0,0,0]
+        viconTest = [0,0,0,0,0,0,30*256,30*256]#55*256,70*256]
         xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
-        time.sleep(0.1)
+        time.sleep(0.01)
 
         xb_send(0, command.START_EXPERIMENT, pack('h', *exp))
-        #time.sleep(params.duration / 1000.0)
-
-        #''' 
-        time.sleep(0.1)
-        viconTest = [0,0,0, 0,0,0, 2*25*256, 3*25*256]
-        xb_send(0, command.INTEGRATED_VICON, pack('8h', *viconTest))
-
         time.sleep(params.duration / 1000.0)
         
-        #time.sleep(10)
+        time.sleep(10)
         xb_send(0, command.STOP_EXPERIMENT, pack('h', *stopSignal))
-        #'''
 
 
         '''

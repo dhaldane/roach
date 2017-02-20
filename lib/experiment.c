@@ -28,11 +28,6 @@
 #define EXP_SJ_STOP         8
 
 
-#define MJ_IDLE         0
-#define MJ_START        1
-#define MJ_STOP         2
-#define MJ_AIR          3
-#define MJ_GND          4
 volatile unsigned char mj_state = MJ_IDLE;
 #define UART_PERIOD     10
 #define FULL_EXTENSION  14000
@@ -95,25 +90,27 @@ void multiJumpFlow() {
 
         case MJ_AIR:
             if(t1_ticks - t_start > UART_PERIOD) {
+                //pidSetGains(2,0,0,100,0,0); // for debugging states
                 send_command_packet(&uart_tx_packet_global, legSetpoint, 0, 2);
                 t_start = t1_ticks; //TODO: build command rate limit into send_command_packet function
             }
 
             // Ground contact transition out of air to ground
-            if (t_start - transition_time > 200 && (footContact() == 1 || gdata[0] < -6000 || gdata[0] > 6000)) {
+            if (t_start - transition_time > 200 && (footContact() == 1)) {
                 mj_state = MJ_GND;
                 transition_time = t1_ticks;
             }
             break;
 
         case MJ_GND:
-            if(t1_ticks - t_start > 100) {
+            if(t1_ticks - t_start > UART_PERIOD) {
+                //pidSetGains(2,0,0,0,0,0); // for debugging states
                 send_command_packet(&uart_tx_packet_global, pushoffCmd, 0, 2);
                 t_start = t1_ticks;
             }
 
             // Liftoff transition from ground to air
-            if (t_start - transition_time > 200 && (footTakeoff() == 1 || calibPos(2) > FULL_EXTENSION)) {
+            if (t_start - transition_time > 50 && (footTakeoff() == 1 || calibPos(2) > FULL_EXTENSION)) {
                 mj_state = MJ_AIR;
                 transition_time = t1_ticks;
             }
@@ -273,14 +270,15 @@ void send_command_packet(packet_union_t *uart_tx_packet, int32_t position, uint3
 extern packet_union_t* last_bldc_packet;
 extern uint8_t last_bldc_packet_is_new;
 
+
+#define MOTOR_OFFSET    500
 char footContact(void) {
-    int eps = 6000;
-    int mot_offset = 0; //800
+    int eps = 1000;
     unsigned int mot, femur;
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
-    mot = (unsigned int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
-    femur = crankFromFemur();
-    if ( mot+mot_offset>femur && (mot+mot_offset - femur) > eps)
+    mot = (unsigned int)(sensor_data->position/111);//*motPos_to_femur_crank_units); //UNITFIX
+    femur = crankFromFemur(); //TODO: put into Scripts/lut.m (lib/lut.h) constant
+    if ( mot-MOTOR_OFFSET>femur && (mot-MOTOR_OFFSET - eps) > femur)
     {
         LED_1 = 1;
         return 1;
@@ -291,11 +289,12 @@ char footContact(void) {
 }
 
 char footTakeoff(void) {
-    int mot, femur;
+    int eps = 1000;
+    unsigned int mot, femur;
     sensor_data_t* sensor_data = (sensor_data_t*)&(last_bldc_packet->packet.data_crc);
-    mot = (int)(sensor_data->position*motPos_to_femur_crank_units); //UNITFIX
+    mot = (unsigned int)(sensor_data->position/111);//*motPos_to_femur_crank_units); //UNITFIX
     femur = crankFromFemur();
-    if ( mot < femur){
+    if ( (mot-MOTOR_OFFSET + eps) < femur){
         return 1;
     } else {
         return 0;

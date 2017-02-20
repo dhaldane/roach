@@ -4,6 +4,12 @@
 #define EXP_SINGLE_JUMP     1
 #define EXP_VICON           2
 
+#define MJ_IDLE         0
+#define MJ_START        1
+#define MJ_STOP         2
+#define MJ_AIR          3
+#define MJ_GND          4
+
 typedef struct {
     int16_t duration;
     int32_t leg_extension; // Units: 15.16 radian

@@ -360,8 +360,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void) {
             pidSetControl();
         } else if (pidObjs[0].mode == 1)
         {
-            tiHSetDC(1, pidObjs[0].pwmDes);
-            tiHSetDC(2, pidObjs[1].pwmDes);
+            tiHSetDC(1, 0xFFF);//pidObjs[0].pwmDes); // more terrible hacks 2/20/17
+            //tiHSetDC(2, pidObjs[1].pwmDes); //JY: terrible hacks 2/20/17
         }
     }
     //LED_3 = 0;
