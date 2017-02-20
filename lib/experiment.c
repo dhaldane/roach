@@ -79,8 +79,11 @@ void multiJumpFlow() {
 
         case MJ_STOP:
             pidObjs[0].onoff = 0;
+            tiHSetDC(1,0);
             pidObjs[2].onoff = 0;
+            tiHSetDC(3,0);
             pidObjs[3].onoff = 0;
+            tiHSetDC(4,0);
             if(t1_ticks - t_start > UART_PERIOD) {
                 send_command_packet(&uart_tx_packet_global, 0, 0, 0);
                 t_start = t1_ticks;
